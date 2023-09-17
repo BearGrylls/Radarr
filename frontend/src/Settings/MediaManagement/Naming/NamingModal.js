@@ -23,9 +23,24 @@ const separatorOptions = [
 ];
 
 const caseOptions = [
-  { key: 'title', value: translate('DefaultCase') },
-  { key: 'lower', value: translate('LowerCase') },
-  { key: 'upper', value: translate('UpperCase') }
+  {
+    key: 'title',
+    get value() {
+      return translate('DefaultCase');
+    }
+  },
+  {
+    key: 'lower',
+    get value() {
+      return translate('LowerCase');
+    }
+  },
+  {
+    key: 'upper',
+    get value() {
+      return translate('UpperCase');
+    }
+  }
 ];
 
 const fileNameTokens = [
@@ -43,6 +58,7 @@ const movieTokens = [
   { token: '{Movie OriginalTitle}', example: 'Τίτλος ταινίας' },
   { token: '{Movie CleanOriginalTitle}', example: 'Τίτλος ταινίας' },
   { token: '{Movie TitleFirstCharacter}', example: 'M' },
+  { token: '{Movie TitleFirstCharacter:DE}', example: 'T' },
   { token: '{Movie Collection}', example: 'The Movie Collection' },
   { token: '{Movie Certification}', example: 'R' },
   { token: '{Release Year}', example: '2009' }

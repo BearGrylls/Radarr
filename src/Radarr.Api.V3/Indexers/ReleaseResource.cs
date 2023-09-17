@@ -32,6 +32,7 @@ namespace Radarr.Api.V3.Indexers
         public bool SceneSource { get; set; }
         public List<string> MovieTitles { get; set; }
         public List<Language> Languages { get; set; }
+        public int? MappedMovieId { get; set; }
         public bool Approved { get; set; }
         public bool TemporarilyRejected { get; set; }
         public bool Rejected { get; set; }
@@ -56,6 +57,12 @@ namespace Radarr.Api.V3.Indexers
         // Sent when queuing an unknown release
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public int? MovieId { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? DownloadClientId { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool? ShouldOverride { get; set; }
     }
 
     public static class ReleaseResourceMapper
@@ -73,7 +80,7 @@ namespace Radarr.Api.V3.Indexers
             {
                 Guid = releaseInfo.Guid,
                 Quality = parsedMovieInfo.Quality,
-                CustomFormats = remoteMovie.CustomFormats.ToResource(),
+                CustomFormats = remoteMovie.CustomFormats.ToResource(false),
                 CustomFormatScore = remoteMovie.CustomFormatScore,
 
                 // QualityWeight
@@ -87,7 +94,8 @@ namespace Radarr.Api.V3.Indexers
                 ReleaseHash = parsedMovieInfo.ReleaseHash,
                 Title = releaseInfo.Title,
                 MovieTitles = parsedMovieInfo.MovieTitles,
-                Languages = parsedMovieInfo.Languages,
+                Languages = remoteMovie.Languages,
+                MappedMovieId = remoteMovie.Movie?.Id,
                 Approved = model.Approved,
                 TemporarilyRejected = model.TemporarilyRejected,
                 Rejected = model.Rejected,

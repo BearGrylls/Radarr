@@ -36,7 +36,8 @@ namespace NzbDrone.Core.Notifications.Webhook
                 Release = new WebhookRelease(quality, remoteMovie),
                 DownloadClient = message.DownloadClientName,
                 DownloadClientType = message.DownloadClientType,
-                DownloadId = message.DownloadId
+                DownloadId = message.DownloadId,
+                CustomFormatInfo = new WebhookCustomFormatInfo(remoteMovie.CustomFormats, remoteMovie.CustomFormatScore)
             };
         }
 
@@ -52,10 +53,12 @@ namespace NzbDrone.Core.Notifications.Webhook
                 Movie = new WebhookMovie(message.Movie),
                 RemoteMovie = new WebhookRemoteMovie(message.Movie),
                 MovieFile = new WebhookMovieFile(movieFile),
+                Release = new WebhookGrabbedRelease(message.Release),
                 IsUpgrade = message.OldMovieFiles.Any(),
                 DownloadClient = message.DownloadClientInfo?.Name,
                 DownloadClientType = message.DownloadClientInfo?.Type,
-                DownloadId = message.DownloadId
+                DownloadId = message.DownloadId,
+                CustomFormatInfo = new WebhookCustomFormatInfo(message.MovieInfo.CustomFormats, message.MovieInfo.CustomFormatScore)
             };
 
             if (message.OldMovieFiles.Any())
@@ -140,6 +143,19 @@ namespace NzbDrone.Core.Notifications.Webhook
             };
         }
 
+        protected WebhookHealthPayload BuildHealthRestoredPayload(HealthCheck.HealthCheck healthCheck)
+        {
+            return new WebhookHealthPayload
+            {
+                EventType = WebhookEventType.HealthRestored,
+                InstanceName = _configFileProvider.InstanceName,
+                Level = healthCheck.Type,
+                Message = healthCheck.Message,
+                Type = healthCheck.Source.Name,
+                WikiUrl = healthCheck.WikiUrl?.ToString()
+            };
+        }
+
         protected WebhookApplicationUpdatePayload BuildApplicationUpdatePayload(ApplicationUpdateMessage updateMessage)
         {
             return new WebhookApplicationUpdatePayload
@@ -150,6 +166,26 @@ namespace NzbDrone.Core.Notifications.Webhook
                 Message = updateMessage.Message,
                 PreviousVersion = updateMessage.PreviousVersion.ToString(),
                 NewVersion = updateMessage.NewVersion.ToString()
+            };
+        }
+
+        protected WebhookManualInteractionPayload BuildManualInteractionRequiredPayload(ManualInteractionRequiredMessage message)
+        {
+            var remoteMovie = message.RemoteMovie;
+            var quality = message.Quality;
+
+            return new WebhookManualInteractionPayload
+            {
+                EventType = WebhookEventType.ManualInteractionRequired,
+                InstanceName = _configFileProvider.InstanceName,
+                ApplicationUrl = _configService.ApplicationUrl,
+                Movie = new WebhookMovie(message.Movie),
+                DownloadInfo = new WebhookDownloadClientItem(quality, message.TrackedDownload.DownloadItem),
+                DownloadClient = message.DownloadClientName,
+                DownloadClientType = message.DownloadClientType,
+                DownloadId = message.DownloadId,
+                CustomFormatInfo = new WebhookCustomFormatInfo(remoteMovie.CustomFormats, remoteMovie.CustomFormatScore),
+                Release = new WebhookGrabbedRelease(message.Release)
             };
         }
 

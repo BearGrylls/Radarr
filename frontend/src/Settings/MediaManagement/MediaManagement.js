@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Alert from 'Components/Alert';
 import FieldSet from 'Components/FieldSet';
 import Form from 'Components/Form/Form';
 import FormGroup from 'Components/Form/FormGroup';
@@ -8,29 +9,74 @@ import FormLabel from 'Components/Form/FormLabel';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import PageContent from 'Components/Page/PageContent';
 import PageContentBody from 'Components/Page/PageContentBody';
-import { inputTypes, sizes } from 'Helpers/Props';
-import RootFoldersConnector from 'RootFolder/RootFoldersConnector';
+import { inputTypes, kinds, sizes } from 'Helpers/Props';
+import RootFolders from 'RootFolder/RootFolders';
 import SettingsToolbarConnector from 'Settings/SettingsToolbarConnector';
 import translate from 'Utilities/String/translate';
 import NamingConnector from './Naming/NamingConnector';
-import AddRootFolderConnector from './RootFolder/AddRootFolderConnector';
+import AddRootFolder from './RootFolder/AddRootFolder';
 
 const rescanAfterRefreshOptions = [
-  { key: 'always', value: translate('Always') },
-  { key: 'afterManual', value: translate('AfterManualRefresh') },
-  { key: 'never', value: translate('Never') }
+  {
+    key: 'always',
+    get value() {
+      return translate('Always');
+    }
+  },
+  {
+    key: 'afterManual',
+    get value() {
+      return translate('AfterManualRefresh');
+    }
+  },
+  {
+    key: 'never',
+    get value() {
+      return translate('Never');
+    }
+  }
 ];
 
 const downloadPropersAndRepacksOptions = [
-  { key: 'preferAndUpgrade', value: translate('PreferAndUpgrade') },
-  { key: 'doNotUpgrade', value: translate('DoNotUpgradeAutomatically') },
-  { key: 'doNotPrefer', value: translate('DoNotPrefer') }
+  {
+    key: 'preferAndUpgrade',
+    get value() {
+      return translate('PreferAndUpgrade');
+    }
+  },
+  {
+    key: 'doNotUpgrade',
+    get value() {
+      return translate('DoNotUpgradeAutomatically');
+    }
+  },
+  {
+    key: 'doNotPrefer',
+    get value() {
+      return translate('DoNotPrefer');
+    }
+  }
 ];
 
 const fileDateOptions = [
-  { key: 'none', value: translate('None') },
-  { key: 'cinemas', value: translate('InCinemasDate') },
-  { key: 'release', value: translate('PhysicalReleaseDate') }
+  {
+    key: 'none',
+    get value() {
+      return translate('None');
+    }
+  },
+  {
+    key: 'cinemas',
+    get value() {
+      return translate('InCinemasDate');
+    }
+  },
+  {
+    key: 'release',
+    get value() {
+      return translate('PhysicalReleaseDate');
+    }
+  }
 ];
 
 class MediaManagement extends Component {
@@ -63,29 +109,29 @@ class MediaManagement extends Component {
           <NamingConnector />
 
           {
-            isFetching &&
+            isFetching ?
               <FieldSet legend={translate('NamingSettings')}>
                 <LoadingIndicator />
-              </FieldSet>
+              </FieldSet> : null
           }
 
           {
-            !isFetching && error &&
+            !isFetching && error ?
               <FieldSet legend={translate('NamingSettings')}>
-                <div>
+                <Alert kind={kinds.DANGER}>
                   {translate('UnableToLoadMediaManagementSettings')}
-                </div>
-              </FieldSet>
+                </Alert>
+              </FieldSet> : null
           }
 
           {
-            hasSettings && !isFetching && !error &&
+            hasSettings && !isFetching && !error ?
               <Form
                 id="mediaManagementSettings"
                 {...otherProps}
               >
                 {
-                  advancedSettings &&
+                  advancedSettings ?
                     <FieldSet legend={translate('Folders')}>
                       <FormGroup
                         advancedSettings={advancedSettings}
@@ -120,11 +166,11 @@ class MediaManagement extends Component {
                           {...settings.deleteEmptyFolders}
                         />
                       </FormGroup>
-                    </FieldSet>
+                    </FieldSet> : null
                 }
 
                 {
-                  advancedSettings &&
+                  advancedSettings ?
                     <FieldSet
                       legend={translate('Importing')}
                     >
@@ -181,6 +227,41 @@ class MediaManagement extends Component {
                         />
                       </FormGroup>
 
+                      <FormGroup
+                        advancedSettings={advancedSettings}
+                        isAdvanced={true}
+                        size={sizes.MEDIUM}
+                      >
+                        <FormLabel>{translate('ImportUsingScript')}</FormLabel>
+
+                        <FormInputGroup
+                          type={inputTypes.CHECK}
+                          name="useScriptImport"
+                          helpText={translate('UseScriptImportHelpText')}
+                          onChange={onInputChange}
+                          {...settings.useScriptImport}
+                        />
+                      </FormGroup>
+
+                      {
+                        settings.useScriptImport.value ?
+                          <FormGroup
+                            advancedSettings={advancedSettings}
+                            isAdvanced={true}
+                          >
+                            <FormLabel>{translate('ImportScriptPath')}</FormLabel>
+
+                            <FormInputGroup
+                              type={inputTypes.PATH}
+                              includeFiles={true}
+                              name="scriptImportPath"
+                              helpText={translate('ScriptImportPathHelpText')}
+                              onChange={onInputChange}
+                              {...settings.scriptImportPath}
+                            />
+                          </FormGroup> : null
+                      }
+
                       <FormGroup size={sizes.MEDIUM}>
                         <FormLabel>{translate('ImportExtraFiles')}</FormLabel>
 
@@ -194,7 +275,7 @@ class MediaManagement extends Component {
                       </FormGroup>
 
                       {
-                        settings.importExtraFiles.value &&
+                        settings.importExtraFiles.value ?
                           <FormGroup
                             advancedSettings={advancedSettings}
                             isAdvanced={true}
@@ -211,9 +292,9 @@ class MediaManagement extends Component {
                               onChange={onInputChange}
                               {...settings.extraFileExtensions}
                             />
-                          </FormGroup>
+                          </FormGroup> : null
                       }
-                    </FieldSet>
+                    </FieldSet> : null
                 }
 
                 <FieldSet
@@ -339,7 +420,7 @@ class MediaManagement extends Component {
                 </FieldSet>
 
                 {
-                  advancedSettings && !isWindows &&
+                  advancedSettings && !isWindows ?
                     <FieldSet
                       legend={translate('Permissions')}
                     >
@@ -392,14 +473,14 @@ class MediaManagement extends Component {
                           {...settings.chownGroup}
                         />
                       </FormGroup>
-                    </FieldSet>
+                    </FieldSet> : null
                 }
-              </Form>
+              </Form> : null
           }
 
           <FieldSet legend={translate('RootFolders')}>
-            <RootFoldersConnector />
-            <AddRootFolderConnector />
+            <RootFolders />
+            <AddRootFolder />
           </FieldSet>
         </PageContentBody>
       </PageContent>

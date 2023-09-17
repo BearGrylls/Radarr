@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Newtonsoft.Json;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.Qualities;
 
@@ -25,8 +24,7 @@ namespace NzbDrone.Core.Parser.Model
         public int Year { get; set; }
         public string ImdbId { get; set; }
         public int TmdbId { get; set; }
-        [JsonIgnore]
-        public Dictionary<string, object> ExtraInfo { get; set; } = new Dictionary<string, object>();
+        public string HardcodedSubs { get; set; }
 
         public string MovieTitle => PrimaryMovieTitle;
 

@@ -10,9 +10,7 @@ using NLog.Common;
 using NLog.Targets;
 using Npgsql;
 using NzbDrone.Common.EnvironmentInfo;
-using NzbDrone.Common.Extensions;
 using Sentry;
-using Sentry.Protocol;
 
 namespace NzbDrone.Common.Instrumentation.Sentry
 {
@@ -51,7 +49,13 @@ namespace NzbDrone.Common.Instrumentation.Sentry
             "UnauthorizedAccessException",
 
             // Filter out people stuck in boot loops
-            "CorruptDatabaseException"
+            "CorruptDatabaseException",
+
+            // Filter SingleInstance Termination Exceptions
+            "TerminateApplicationException",
+
+            // User config issue, root folder missing, etc.
+            "DirectoryNotFoundException"
         };
 
         public static readonly List<string> FilteredExceptionMessages = new List<string>
@@ -108,7 +112,7 @@ namespace NzbDrone.Common.Instrumentation.Sentry
                                       o.Dsn = dsn;
                                       o.AttachStacktrace = true;
                                       o.MaxBreadcrumbs = 200;
-                                      o.Release = BuildInfo.Release;
+                                      o.Release = $"{BuildInfo.AppName}@{BuildInfo.Release}";
                                       o.BeforeSend = x => SentryCleanser.CleanseEvent(x);
                                       o.BeforeBreadcrumb = x => SentryCleanser.CleanseBreadcrumb(x);
                                       o.Environment = BuildInfo.Branch;

@@ -126,7 +126,7 @@ namespace NzbDrone.Host
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
-                    { apiKeyHeader, new string[] { } }
+                    { apiKeyHeader, Array.Empty<string>() }
                 });
 
                 var apikeyQuery = new OpenApiSecurityScheme
@@ -157,7 +157,7 @@ namespace NzbDrone.Host
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
-                    { apikeyQuery, new string[] { } }
+                    { apikeyQuery, Array.Empty<string>() }
                 });
             });
 
@@ -172,6 +172,8 @@ namespace NzbDrone.Host
                 .PersistKeysToFileSystem(new DirectoryInfo(Configuration["dataProtectionFolder"]));
 
             services.AddSingleton<IAuthorizationPolicyProvider, UiAuthorizationPolicyProvider>();
+            services.AddSingleton<IAuthorizationHandler, UiAuthorizationHandler>();
+
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("SignalR", policy =>
@@ -224,6 +226,8 @@ namespace NzbDrone.Host
             appFolderFactory.Register();
             pidFileProvider.Write();
 
+            configFileProvider.EnsureDefaultConfigFile();
+
             reconfigureLogging.Reconfigure();
 
             EnsureSingleInstance(false, startupContext, singleInstancePolicy);
@@ -264,6 +268,7 @@ namespace NzbDrone.Host
 
             app.UseMiddleware<VersionMiddleware>();
             app.UseMiddleware<UrlBaseMiddleware>(configFileProvider.UrlBase);
+            app.UseMiddleware<StartingUpMiddleware>();
             app.UseMiddleware<CacheHeaderMiddleware>();
             app.UseMiddleware<IfModifiedMiddleware>();
             app.UseMiddleware<BufferingMiddleware>(new List<string> { "/api/v3/command" });

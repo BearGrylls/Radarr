@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.FileSystemGlobbing;
 using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
@@ -19,9 +18,10 @@ namespace NzbDrone.Core.Parser
                                                                             (?<german>german\b|videomann|ger[. ]dub)|
                                                                             (?<flemish>flemish)|
                                                                             (?<bulgarian>bgaudio)|
+                                                                            (?<romanian>rodubbed)|
                                                                             (?<brazilian>dublado)|
                                                                             (?<greek>greek)|
-                                                                            (?<french>\b(?:FR|VO|VFF|VFQ|VFI|VF2|TRUEFRENCH|FRE|FRA)\b)|
+                                                                            (?<french>\b(?:FR|VO|VF|VFF|VFQ|VFI|VF2|TRUEFRENCH|FRE|FRA)\b)|
                                                                             (?<russian>\brus\b)|
                                                                             (?<english>\beng\b)|
                                                                             (?<hungarian>\b(?:HUNDUB|HUN)\b)|
@@ -30,7 +30,8 @@ namespace NzbDrone.Core.Parser
                                                                             (?<chinese>\[(?:CH[ST]|BIG5|GB)\]|简|繁|字幕)|
                                                                             (?<ukrainian>(?:(?:\dx)?UKR))|
                                                                             (?<spanish>\b(?:español|castellano)\b)|
-                                                                            (?<latvian>\bLV\b)",
+                                                                            (?<latvian>\bLV\b)|
+                                                                            (?<telugu>\btel\b)",
                                                                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
         private static readonly Regex CaseSensitiveLanguageRegex = new Regex(@"(?:(?i)(?<!SUB[\W|_|^]))(?:(?<lithuanian>\bLT\b)|
@@ -197,6 +198,26 @@ namespace NzbDrone.Core.Parser
                 languages.Add(Language.Latvian);
             }
 
+            if (lowerTitle.Contains("latino"))
+            {
+                languages.Add(Language.SpanishLatino);
+            }
+
+            if (lowerTitle.Contains("catalan"))
+            {
+                languages.Add(Language.Catalan);
+            }
+
+            if (lowerTitle.Contains("tamil"))
+            {
+                languages.Add(Language.Tamil);
+            }
+
+            if (lowerTitle.Contains("telugu"))
+            {
+                languages.Add(Language.Telugu);
+            }
+
             // Case sensitive
             var caseSensitiveMatchs = CaseSensitiveLanguageRegex.Matches(title);
 
@@ -316,6 +337,16 @@ namespace NzbDrone.Core.Parser
                 {
                     languages.Add(Language.Latvian);
                 }
+
+                if (match.Groups["romanian"].Success)
+                {
+                    languages.Add(Language.Romanian);
+                }
+
+                if (match.Groups["telugu"].Success)
+                {
+                    languages.Add(Language.Telugu);
+                }
             }
 
             if (!languages.Any())
@@ -326,7 +357,7 @@ namespace NzbDrone.Core.Parser
             return languages.DistinctBy(l => (int)l).ToList();
         }
 
-        public static IEnumerable<string> ParseLanguageTags(string fileName)
+        public static List<string> ParseLanguageTags(string fileName)
         {
             try
             {
@@ -335,14 +366,14 @@ namespace NzbDrone.Core.Parser
                 var languageTags = match.Groups["tags"].Captures.Cast<Capture>()
                     .Where(tag => !tag.Value.Empty())
                     .Select(tag => tag.Value.ToLower());
-                return languageTags;
+                return languageTags.ToList();
             }
             catch (Exception ex)
             {
                 Logger.Debug(ex, "Failed parsing language tags from subtitle file: {0}", fileName);
             }
 
-            return Enumerable.Empty<string>();
+            return new List<string>();
         }
 
         public static Language ParseSubtitleLanguage(string fileName)
@@ -362,7 +393,7 @@ namespace NzbDrone.Core.Parser
                     return isoLanguage?.Language ?? Language.Unknown;
                 }
 
-                foreach (Language language in Language.All)
+                foreach (var language in Language.All)
                 {
                     if (simpleFilename.EndsWith(language.ToString(), StringComparison.OrdinalIgnoreCase))
                     {

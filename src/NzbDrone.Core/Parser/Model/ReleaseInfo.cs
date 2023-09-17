@@ -1,11 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
+using NzbDrone.Core.Download.Pending;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.Languages;
 
 namespace NzbDrone.Core.Parser.Model
 {
     public class ReleaseInfo
     {
+        public ReleaseInfo()
+        {
+            Languages = new List<Language>();
+        }
+
         public string Guid { get; set; }
         public string Title { get; set; }
         public long Size { get; set; }
@@ -27,6 +36,11 @@ namespace NzbDrone.Core.Parser.Model
         public string Resolution { get; set; }
 
         public IndexerFlags IndexerFlags { get; set; }
+        public List<Language> Languages { get; set; }
+
+        // Used to track pending releases that are being reprocessed
+        [JsonIgnore]
+        public PendingReleaseReason? PendingReleaseReason { get; set; }
 
         public int Age
         {
@@ -92,11 +106,13 @@ namespace NzbDrone.Core.Parser.Model
         G_DoubleUpload = 4, // General
         PTP_Golden = 8, // PTP
         PTP_Approved = 16, // PTP
-        HDB_Internal = 32, // HDBits, internal
+        G_Internal = 32, // General, internal
+        [Obsolete]
         AHD_Internal = 64, // AHD, internal
         G_Scene = 128, // General, the torrent comes from the "scene"
         G_Freeleech75 = 256, // Currently only used for AHD, signifies a torrent counts towards 75 percent of your download quota.
         G_Freeleech25 = 512, // Currently only used for AHD, signifies a torrent counts towards 25 percent of your download quota.
+        [Obsolete]
         AHD_UserRelease = 1024 // AHD, internal
     }
 }

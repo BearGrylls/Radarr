@@ -82,6 +82,7 @@ namespace NzbDrone.Core.Extras.Subtitles
                     foreach (var subtitleFile in group)
                     {
                         var suffix = GetSuffix(subtitleFile.Language, copy, subtitleFile.LanguageTags, groupCount > 1);
+
                         movedFiles.AddIfNotNull(MoveFile(movie, movieFile, subtitleFile, suffix));
 
                         copy++;
@@ -145,11 +146,11 @@ namespace NzbDrone.Core.Extras.Subtitles
             // Use any sub if only episode in folder
             if (matchingFiles.Count == 0 && filteredFiles.Count > 0)
             {
-                var videoFiles = _diskProvider.GetFiles(sourceFolder, SearchOption.AllDirectories)
+                var videoFiles = _diskProvider.GetFiles(sourceFolder, true)
                                               .Where(file => MediaFileExtensions.Extensions.Contains(Path.GetExtension(file)))
                                               .ToList();
 
-                if (videoFiles.Count() > 2)
+                if (videoFiles.Count > 2)
                 {
                     return importedFiles;
                 }
@@ -177,7 +178,7 @@ namespace NzbDrone.Core.Extras.Subtitles
 
             var subtitleFiles = new List<SubtitleFile>();
 
-            foreach (string file in matchingFiles)
+            foreach (var file in matchingFiles)
             {
                 var language = LanguageParser.ParseSubtitleLanguage(file);
                 var extension = Path.GetExtension(file);
@@ -185,9 +186,9 @@ namespace NzbDrone.Core.Extras.Subtitles
                 var subFile = new SubtitleFile
                 {
                     Language = language,
-                    Extension = extension
+                    Extension = extension,
+                    LanguageTags = languageTags
                 };
-                subFile.LanguageTags = languageTags.ToList();
                 subFile.RelativePath = PathExtensions.GetRelativePath(sourceFolder, file);
                 subtitleFiles.Add(subFile);
             }
@@ -246,7 +247,7 @@ namespace NzbDrone.Core.Extras.Subtitles
 
             if (languageTags.Any())
             {
-                suffixBuilder.Append(".");
+                suffixBuilder.Append('.');
                 suffixBuilder.Append(string.Join(".", languageTags));
             }
 

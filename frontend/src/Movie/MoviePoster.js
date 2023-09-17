@@ -15,10 +15,15 @@ function MoviePoster(props) {
 }
 
 MoviePoster.propTypes = {
+  ...MovieImage.propTypes,
+  coverType: PropTypes.string,
+  placeholder: PropTypes.string,
+  overflow: PropTypes.bool,
   size: PropTypes.number.isRequired
 };
 
 MoviePoster.defaultProps = {
+  ...MovieImage.defaultProps,
   size: 250
 };
 

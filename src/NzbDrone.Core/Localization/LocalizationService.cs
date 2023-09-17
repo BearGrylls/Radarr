@@ -20,6 +20,7 @@ namespace NzbDrone.Core.Localization
         Dictionary<string, string> GetLocalizationDictionary();
         string GetLocalizedString(string phrase);
         string GetLocalizedString(string phrase, string language);
+        string GetLanguageIdentifier();
     }
 
     public class LocalizationService : ILocalizationService, IHandleAsync<ConfigSavedEvent>
@@ -45,14 +46,14 @@ namespace NzbDrone.Core.Localization
 
         public Dictionary<string, string> GetLocalizationDictionary()
         {
-            var language = GetSetLanguageFileName();
+            var language = GetLanguageFileName();
 
             return GetLocalizationDictionary(language);
         }
 
         public string GetLocalizedString(string phrase)
         {
-            var language = GetSetLanguageFileName();
+            var language = GetLanguageFileName();
 
             return GetLocalizedString(phrase, language);
         }
@@ -66,7 +67,7 @@ namespace NzbDrone.Core.Localization
 
             if (language.IsNullOrWhiteSpace())
             {
-                language = GetSetLanguageFileName();
+                language = GetLanguageFileName();
             }
 
             if (language == null)
@@ -84,17 +85,22 @@ namespace NzbDrone.Core.Localization
             return phrase;
         }
 
-        private string GetSetLanguageFileName()
+        public string GetLanguageIdentifier()
         {
-            var isoLanguage = IsoLanguages.Get((Language)_configService.UILanguage);
+            var isoLanguage = IsoLanguages.Get((Language)_configService.UILanguage) ?? IsoLanguages.Get(Language.English);
             var language = isoLanguage.TwoLetterCode;
 
             if (isoLanguage.CountryCode.IsNotNullOrWhiteSpace())
             {
-                language = string.Format("{0}_{1}", language, isoLanguage.CountryCode);
+                language = $"{language}-{isoLanguage.CountryCode.ToUpperInvariant()}";
             }
 
             return language;
+        }
+
+        private string GetLanguageFileName()
+        {
+            return GetLanguageIdentifier().Replace("-", "_").ToLowerInvariant();
         }
 
         private Dictionary<string, string> GetLocalizationDictionary(string language)
@@ -127,7 +133,7 @@ namespace NzbDrone.Core.Localization
 
             await CopyInto(dictionary, baseFilenamePath).ConfigureAwait(false);
 
-            if (culture.Contains("_"))
+            if (culture.Contains('_'))
             {
                 var languageBaseFilenamePath = Path.Combine(prefix, GetResourceFilename(culture.Split('_')[0]));
                 await CopyInto(dictionary, languageBaseFilenamePath).ConfigureAwait(false);
@@ -146,21 +152,12 @@ namespace NzbDrone.Core.Localization
                 return;
             }
 
-            using (var fs = File.OpenRead(resourcePath))
-            {
-                if (fs != null)
-                {
-                    var dict = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(fs);
+            await using var fs = File.OpenRead(resourcePath);
+            var dict = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(fs);
 
-                    foreach (var key in dict.Keys)
-                    {
-                        dictionary[key] = dict[key];
-                    }
-                }
-                else
-                {
-                    _logger.Error("Missing translation/culture resource: {0}", resourcePath);
-                }
+            foreach (var key in dict.Keys)
+            {
+                dictionary[key] = dict[key];
             }
         }
 

@@ -88,8 +88,6 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
 
                 if (!addHasSetShareLimits && setShareLimits)
                 {
-                    Proxy.SetTorrentSeedingConfiguration(hash.ToLower(), remoteMovie.SeedConfiguration, Settings);
-
                     try
                     {
                         Proxy.SetTorrentSeedingConfiguration(hash.ToLower(), remoteMovie.SeedConfiguration, Settings);
@@ -253,6 +251,7 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
                     case "queuedDL": // queuing is enabled and torrent is queued for download
                     case "checkingDL": // same as checkingUP, but torrent has NOT finished downloading
                     case "checkingUP": // torrent has finished downloading and is being checked. Set when `recheck torrent on completion` is enabled. In the event the check fails we shouldn't treat it as completed.
+                    case "checkingResumeData": // torrent is checking resume data on load
                         item.Status = DownloadItemStatus.Queued;
                         break;
 
@@ -279,6 +278,7 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
                         if (config.DhtEnabled)
                         {
                             item.Status = DownloadItemStatus.Queued;
+                            item.Message = "qBittorrent is downloading metadata";
                         }
                         else
                         {
@@ -496,7 +496,7 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
                 return null;
             }
 
-            Dictionary<string, QBittorrentLabel> labels = Proxy.GetLabels(Settings);
+            var labels = Proxy.GetLabels(Settings);
 
             if (Settings.MovieCategory.IsNotNullOrWhiteSpace() && !labels.ContainsKey(Settings.MovieCategory))
             {
@@ -626,11 +626,11 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
 
             if (torrent.SeedingTimeLimit >= 0)
             {
-                seedingTimeLimit = torrent.SeedingTimeLimit;
+                seedingTimeLimit = torrent.SeedingTimeLimit * 60;
             }
             else if (torrent.SeedingTimeLimit == -2 && config.MaxSeedingTimeEnabled)
             {
-                seedingTimeLimit = config.MaxSeedingTime;
+                seedingTimeLimit = config.MaxSeedingTime * 60;
             }
             else
             {

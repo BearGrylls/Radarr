@@ -2,7 +2,6 @@ using System.Linq;
 using FluentValidation;
 using NzbDrone.Core.Annotations;
 using NzbDrone.Core.Languages;
-using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Validation;
 
 namespace NzbDrone.Core.CustomFormats
@@ -11,7 +10,6 @@ namespace NzbDrone.Core.CustomFormats
     {
         public LanguageSpecificationValidator()
         {
-            RuleFor(c => c.Value).NotEmpty();
             RuleFor(c => c.Value).Custom((value, context) =>
             {
                 if (!Language.All.Any(o => o.Id == value))
@@ -32,12 +30,13 @@ namespace NzbDrone.Core.CustomFormats
         [FieldDefinition(1, Label = "Language", Type = FieldType.Select, SelectOptions = typeof(LanguageFieldConverter))]
         public int Value { get; set; }
 
-        protected override bool IsSatisfiedByWithoutNegate(ParsedMovieInfo movieInfo)
+        protected override bool IsSatisfiedByWithoutNegate(CustomFormatInput input)
         {
-            var comparedLanguage = movieInfo != null && Value == Language.Original.Id && movieInfo.ExtraInfo.ContainsKey("OriginalLanguage")
-                ? (Language)movieInfo.ExtraInfo["OriginalLanguage"]
+            var comparedLanguage = input.MovieInfo != null && input.Movie != null && Value == Language.Original.Id && input.Movie.MovieMetadata.Value.OriginalLanguage != Language.Unknown
+                ? input.Movie.MovieMetadata.Value.OriginalLanguage
                 : (Language)Value;
-            return movieInfo?.Languages?.Contains(comparedLanguage) ?? false;
+
+            return input?.Languages?.Contains(comparedLanguage) ?? false;
         }
 
         public override NzbDroneValidationResult Validate()

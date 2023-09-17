@@ -51,11 +51,23 @@
   flex: 0 0 115px;
 }
 
+.originalLanguage {
+  composes: cell;
+
+  flex: 1 0 125px;
+}
+
 .ratings,
 .runtime {
   composes: cell;
 
   flex: 0 0 90px;
+}
+
+.popularity {
+  composes: cell;
+
+  flex: 0 0 100px;
 }
 
 .lists {

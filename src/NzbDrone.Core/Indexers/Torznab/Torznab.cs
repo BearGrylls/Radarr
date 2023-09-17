@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentValidation.Results;
 using NLog;
 using NzbDrone.Common.Extensions;
@@ -20,7 +21,13 @@ namespace NzbDrone.Core.Indexers.Torznab
         public override string Name => "Torznab";
 
         public override DownloadProtocol Protocol => DownloadProtocol.Torrent;
-        public override int PageSize => _capabilitiesProvider.GetCapabilities(Settings).DefaultPageSize;
+        public override int PageSize => GetProviderPageSize();
+
+        public Torznab(INewznabCapabilitiesProvider capabilitiesProvider, IHttpClient httpClient, IIndexerStatusService indexerStatusService, IConfigService configService, IParsingService parsingService, Logger logger)
+            : base(httpClient, indexerStatusService, configService, parsingService, logger)
+        {
+            _capabilitiesProvider = capabilitiesProvider;
+        }
 
         public override IIndexerRequestGenerator GetRequestGenerator()
         {
@@ -41,14 +48,7 @@ namespace NzbDrone.Core.Indexers.Torznab
             get
             {
                 yield return GetDefinition("Jackett", GetSettings("http://localhost:9117/api/v2.0/indexers/YOURINDEXER/results/torznab/"));
-                yield return GetDefinition("HD4Free.xyz", GetSettings("http://hd4free.xyz"));
             }
-        }
-
-        public Torznab(INewznabCapabilitiesProvider capabilitiesProvider, IHttpClient httpClient, IIndexerStatusService indexerStatusService, IConfigService configService, IParsingService parsingService, Logger logger)
-            : base(httpClient, indexerStatusService, configService, parsingService, logger)
-        {
-            _capabilitiesProvider = capabilitiesProvider;
         }
 
         private IndexerDefinition GetDefinition(string name, TorznabSettings settings)
@@ -84,9 +84,10 @@ namespace NzbDrone.Core.Indexers.Torznab
             return settings;
         }
 
-        protected override void Test(List<ValidationFailure> failures)
+        protected override async Task Test(List<ValidationFailure> failures)
         {
-            base.Test(failures);
+            await base.Test(failures);
+
             if (failures.HasErrors())
             {
                 return;
@@ -134,8 +135,7 @@ namespace NzbDrone.Core.Indexers.Torznab
                 }
 
                 if (capabilities.SupportedMovieSearchParameters != null &&
-                    new[] { "q", "imdbid" }.Any(v => capabilities.SupportedMovieSearchParameters.Contains(v)) &&
-                    new[] { "imdbtitle", "imdbyear" }.All(v => capabilities.SupportedMovieSearchParameters.Contains(v)))
+                    new[] { "q", "tmdbid", "imdbid" }.Any(v => capabilities.SupportedMovieSearchParameters.Contains(v)))
                 {
                     return null;
                 }
@@ -146,7 +146,7 @@ namespace NzbDrone.Core.Indexers.Torznab
             {
                 _logger.Warn(ex, "Unable to connect to indexer: " + ex.Message);
 
-                return new ValidationFailure(string.Empty, "Unable to connect to indexer, check the log for more details");
+                return new ValidationFailure(string.Empty, $"Unable to connect to indexer: {ex.Message}. Check the log surrounding this error for details");
             }
         }
 
@@ -188,6 +188,18 @@ namespace NzbDrone.Core.Indexers.Torznab
             }
 
             return base.RequestAction(action, query);
+        }
+
+        private int GetProviderPageSize()
+        {
+            try
+            {
+                return Math.Min(100, Math.Max(_capabilitiesProvider.GetCapabilities(Settings).DefaultPageSize, _capabilitiesProvider.GetCapabilities(Settings).MaxPageSize));
+            }
+            catch
+            {
+                return 100;
+            }
         }
     }
 }

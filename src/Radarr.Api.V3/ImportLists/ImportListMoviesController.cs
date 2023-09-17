@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.ImportLists.ImportExclusions;
@@ -10,6 +9,7 @@ using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.Organizer;
 using Radarr.Api.V3.Movies;
 using Radarr.Http;
@@ -27,6 +27,8 @@ namespace Radarr.Api.V3.ImportLists
         private readonly IImportListFactory _importListFactory;
         private readonly IImportExclusionsService _importExclusionService;
         private readonly INamingConfigService _namingService;
+        private readonly IMovieTranslationService _movieTranslationService;
+        private readonly IMapCoversToLocal _coverMapper;
         private readonly IConfigService _configService;
 
         public ImportListMoviesController(IMovieService movieService,
@@ -37,6 +39,8 @@ namespace Radarr.Api.V3.ImportLists
                                     IImportListFactory importListFactory,
                                     IImportExclusionsService importExclusionsService,
                                     INamingConfigService namingService,
+                                    IMovieTranslationService movieTranslationService,
+                                    IMapCoversToLocal coverMapper,
                                     IConfigService configService)
         {
             _movieService = movieService;
@@ -47,13 +51,15 @@ namespace Radarr.Api.V3.ImportLists
             _importListFactory = importListFactory;
             _importExclusionService = importExclusionsService;
             _namingService = namingService;
+            _movieTranslationService = movieTranslationService;
+            _coverMapper = coverMapper;
             _configService = configService;
         }
 
         [HttpGet]
         public object GetDiscoverMovies(bool includeRecommendations = false)
         {
-            var movieLanguge = (Language)_configService.MovieInfoLanguage;
+            var movieLanguage = (Language)_configService.MovieInfoLanguage;
 
             var realResults = new List<ImportListMoviesResource>();
             var listExclusions = _importExclusionService.GetAllExclusions();
@@ -70,11 +76,11 @@ namespace Radarr.Api.V3.ImportLists
                     mapped = _movieInfo.GetBulkMovieInfo(results).Select(m => new Movie { MovieMetadata = m }).ToList();
                 }
 
-                realResults.AddRange(MapToResource(mapped.Where(x => x != null), movieLanguge));
+                realResults.AddRange(MapToResource(mapped.Where(x => x != null), movieLanguage));
                 realResults.ForEach(x => x.IsRecommendation = true);
             }
 
-            var listMovies = MapToResource(_listMovieService.GetAllForLists(_importListFactory.Enabled().Select(x => x.Definition.Id).ToList()), movieLanguge).ToList();
+            var listMovies = MapToResource(_listMovieService.GetAllForLists(_importListFactory.Enabled().Select(x => x.Definition.Id).ToList()), movieLanguage).ToList();
 
             realResults.AddRange(listMovies);
 
@@ -111,11 +117,13 @@ namespace Radarr.Api.V3.ImportLists
 
             foreach (var currentMovie in movies)
             {
-                var resource = DiscoverMoviesResourceMapper.ToResource(currentMovie);
+                var resource = currentMovie.ToResource();
+                _coverMapper.ConvertToLocalUrls(0, resource.Images);
+
                 var poster = currentMovie.MovieMetadata.Value.Images.FirstOrDefault(c => c.CoverType == MediaCoverTypes.Poster);
                 if (poster != null)
                 {
-                    resource.RemotePoster = poster.Url;
+                    resource.RemotePoster = poster.RemoteUrl;
                 }
 
                 var translation = currentMovie.MovieMetadata.Value.Translations.FirstOrDefault(t => t.Language == language);
@@ -133,16 +141,22 @@ namespace Radarr.Api.V3.ImportLists
             // Avoid calling for naming spec on every movie in filenamebuilder
             var namingConfig = _namingService.GetConfig();
 
+            var translations = _movieTranslationService
+                .GetAllTranslationsForLanguage(language)
+                .ToDictionary(x => x.MovieMetadataId);
+
             foreach (var currentMovie in movies)
             {
-                var resource = DiscoverMoviesResourceMapper.ToResource(currentMovie);
+                var resource = currentMovie.ToResource();
+                _coverMapper.ConvertToLocalUrls(0, resource.Images);
+
                 var poster = currentMovie.MovieMetadata.Value.Images.FirstOrDefault(c => c.CoverType == MediaCoverTypes.Poster);
                 if (poster != null)
                 {
-                    resource.RemotePoster = poster.Url;
+                    resource.RemotePoster = poster.RemoteUrl;
                 }
 
-                var translation = currentMovie.MovieMetadata.Value.Translations.FirstOrDefault(t => t.Language == language);
+                var translation = GetTranslationFromDictionary(translations, currentMovie.MovieMetadata, language);
 
                 resource.Title = translation?.Title ?? resource.Title;
                 resource.Overview = translation?.Overview ?? resource.Overview;
@@ -153,6 +167,22 @@ namespace Radarr.Api.V3.ImportLists
 
                 yield return resource;
             }
+        }
+
+        private MovieTranslation GetTranslationFromDictionary(Dictionary<int, MovieTranslation> translations, MovieMetadata movie, Language configLanguage)
+        {
+            if (configLanguage == Language.Original)
+            {
+                return new MovieTranslation
+                {
+                    Title = movie.OriginalTitle,
+                    Overview = movie.Overview
+                };
+            }
+
+            translations.TryGetValue(movie.Id, out var translation);
+
+            return translation;
         }
     }
 }

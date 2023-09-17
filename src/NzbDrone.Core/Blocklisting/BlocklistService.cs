@@ -128,10 +128,10 @@ namespace NzbDrone.Core.Blocklisting
         {
             if (release.InfoHash.IsNotNullOrWhiteSpace())
             {
-                return release.InfoHash.Equals(item.TorrentInfoHash);
+                return release.InfoHash.Equals(item.TorrentInfoHash, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            return item.Indexer.Equals(release.Indexer, StringComparison.InvariantCultureIgnoreCase);
+            return HasSameIndexer(item, release.Indexer);
         }
 
         private bool HasSameIndexer(Blocklist item, string indexer)

@@ -51,13 +51,14 @@ class EditDownloadClientModalContent extends Component {
       removeCompletedDownloads,
       removeFailedDownloads,
       fields,
+      tags,
       message
     } = item;
 
     return (
       <ModalContent onModalClose={onModalClose}>
         <ModalHeader>
-          {`${id ? translate('Edit') : translate('Add')} ${translate('DownloadClient')} - ${implementationName}`}
+          {id ? translate('EditDownloadClientImplementation', { implementationName }) : translate('AddDownloadClientImplementation', { implementationName })}
         </ModalHeader>
 
         <ModalBody>
@@ -136,6 +137,18 @@ class EditDownloadClientModalContent extends Component {
                     min={1}
                     max={50}
                     {...priority}
+                    onChange={onInputChange}
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>{translate('Tags')}</FormLabel>
+
+                  <FormInputGroup
+                    type={inputTypes.TAG}
+                    name="tags"
+                    helpText={translate('DownloadClientTagHelpText')}
+                    {...tags}
                     onChange={onInputChange}
                   />
                 </FormGroup>

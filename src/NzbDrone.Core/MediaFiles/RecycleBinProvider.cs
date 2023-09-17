@@ -6,6 +6,7 @@ using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaFiles.Commands;
+using NzbDrone.Core.MediaFiles.MovieImport;
 using NzbDrone.Core.Messaging.Commands;
 
 namespace NzbDrone.Core.MediaFiles
@@ -56,7 +57,7 @@ namespace NzbDrone.Core.MediaFiles
 
                 _logger.Debug("Setting last accessed: {0}", path);
                 _diskProvider.FolderSetLastWriteTime(destination, DateTime.UtcNow);
-                foreach (var file in _diskProvider.GetFiles(destination, SearchOption.AllDirectories))
+                foreach (var file in _diskProvider.GetFiles(destination, true))
                 {
                     SetLastWriteTime(file, DateTime.UtcNow);
                 }
@@ -96,7 +97,7 @@ namespace NzbDrone.Core.MediaFiles
                 catch (IOException e)
                 {
                     _logger.Error(e, "Unable to create the folder '{0}' in the recycling bin for the file '{1}'", destinationFolder, fileInfo.Name);
-                    throw;
+                    throw new RecycleBinException($"Unable to create the folder '{destinationFolder}' in the recycling bin for the file '{fileInfo.Name}'", e);
                 }
 
                 var index = 1;
@@ -121,7 +122,7 @@ namespace NzbDrone.Core.MediaFiles
                 catch (IOException e)
                 {
                     _logger.Error(e, "Unable to move '{0}' to the recycling bin: '{1}'", path, destination);
-                    throw;
+                    throw new RecycleBinException($"Unable to move '{path}' to the recycling bin: '{destination}'", e);
                 }
 
                 SetLastWriteTime(destination, DateTime.UtcNow);
@@ -145,7 +146,7 @@ namespace NzbDrone.Core.MediaFiles
                 _diskProvider.DeleteFolder(folder, true);
             }
 
-            foreach (var file in _diskProvider.GetFiles(_configService.RecycleBin, SearchOption.TopDirectoryOnly))
+            foreach (var file in _diskProvider.GetFiles(_configService.RecycleBin, false))
             {
                 _diskProvider.DeleteFile(file);
             }
@@ -171,7 +172,7 @@ namespace NzbDrone.Core.MediaFiles
 
             _logger.Info("Removing items older than {0} days from the recycling bin", cleanupDays);
 
-            foreach (var file in _diskProvider.GetFiles(_configService.RecycleBin, SearchOption.AllDirectories))
+            foreach (var file in _diskProvider.GetFiles(_configService.RecycleBin, true))
             {
                 if (_diskProvider.FileGetLastWrite(file).AddDays(cleanupDays) > DateTime.UtcNow)
                 {

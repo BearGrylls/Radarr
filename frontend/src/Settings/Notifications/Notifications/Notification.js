@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import Card from 'Components/Card';
 import Label from 'Components/Label';
 import ConfirmModal from 'Components/Modal/ConfirmModal';
+import TagList from 'Components/TagList';
 import { kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
 import EditNotificationModalConnector from './EditNotificationModalConnector';
@@ -64,7 +65,9 @@ class Notification extends Component {
       onMovieFileDelete,
       onMovieFileDeleteForUpgrade,
       onHealthIssue,
+      onHealthRestored,
       onApplicationUpdate,
+      onManualInteractionRequired,
       supportsOnGrab,
       supportsOnDownload,
       supportsOnUpgrade,
@@ -74,7 +77,11 @@ class Notification extends Component {
       supportsOnMovieFileDelete,
       supportsOnMovieFileDeleteForUpgrade,
       supportsOnHealthIssue,
-      supportsOnApplicationUpdate
+      supportsOnHealthRestored,
+      supportsOnApplicationUpdate,
+      supportsOnManualInteractionRequired,
+      tags,
+      tagList
     } = this.props;
 
     return (
@@ -136,6 +143,14 @@ class Notification extends Component {
         }
 
         {
+          supportsOnHealthRestored && onHealthRestored ?
+            <Label kind={kinds.SUCCESS}>
+              {translate('OnHealthRestored')}
+            </Label> :
+            null
+        }
+
+        {
           supportsOnApplicationUpdate && onApplicationUpdate ?
             <Label kind={kinds.SUCCESS}>
               {translate('OnApplicationUpdate')}
@@ -168,7 +183,15 @@ class Notification extends Component {
         }
 
         {
-          !onGrab && !onDownload && !onRename && !onHealthIssue && !onApplicationUpdate && !onMovieDelete && !onMovieFileDelete ?
+          supportsOnManualInteractionRequired && onManualInteractionRequired ?
+            <Label kind={kinds.SUCCESS}>
+              {translate('OnManualInteractionRequired')}
+            </Label> :
+            null
+        }
+
+        {
+          !onGrab && !onDownload && !onRename && !onHealthIssue && !onHealthRestored && !onApplicationUpdate && !onMovieDelete && !onMovieFileDelete && !onManualInteractionRequired ?
             <Label
               kind={kinds.DISABLED}
               outline={true}
@@ -177,6 +200,11 @@ class Notification extends Component {
             </Label> :
             null
         }
+
+        <TagList
+          tags={tags}
+          tagList={tagList}
+        />
 
         <EditNotificationModalConnector
           id={id}
@@ -189,7 +217,7 @@ class Notification extends Component {
           isOpen={this.state.isDeleteNotificationModalOpen}
           kind={kinds.DANGER}
           title={translate('DeleteNotification')}
-          message={translate('DeleteNotificationMessageText', [name])}
+          message={translate('DeleteNotificationMessageText', { name })}
           confirmLabel={translate('Delete')}
           onConfirm={this.onConfirmDeleteNotification}
           onCancel={this.onDeleteNotificationModalClose}
@@ -211,7 +239,9 @@ Notification.propTypes = {
   onMovieFileDelete: PropTypes.bool.isRequired,
   onMovieFileDeleteForUpgrade: PropTypes.bool.isRequired,
   onHealthIssue: PropTypes.bool.isRequired,
+  onHealthRestored: PropTypes.bool.isRequired,
   onApplicationUpdate: PropTypes.bool.isRequired,
+  onManualInteractionRequired: PropTypes.bool.isRequired,
   supportsOnGrab: PropTypes.bool.isRequired,
   supportsOnDownload: PropTypes.bool.isRequired,
   supportsOnMovieDelete: PropTypes.bool.isRequired,
@@ -221,7 +251,11 @@ Notification.propTypes = {
   supportsOnRename: PropTypes.bool.isRequired,
   supportsOnMovieAdded: PropTypes.bool.isRequired,
   supportsOnHealthIssue: PropTypes.bool.isRequired,
+  supportsOnHealthRestored: PropTypes.bool.isRequired,
   supportsOnApplicationUpdate: PropTypes.bool.isRequired,
+  supportsOnManualInteractionRequired: PropTypes.bool.isRequired,
+  tags: PropTypes.arrayOf(PropTypes.number).isRequired,
+  tagList: PropTypes.arrayOf(PropTypes.object).isRequired,
   onConfirmDeleteNotification: PropTypes.func.isRequired
 };
 

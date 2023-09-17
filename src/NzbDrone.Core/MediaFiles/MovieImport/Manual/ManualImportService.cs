@@ -6,6 +6,7 @@ using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
+using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.TrackedDownloads;
@@ -37,6 +38,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
         private readonly IAggregationService _aggregationService;
         private readonly ITrackedDownloadService _trackedDownloadService;
         private readonly IDownloadedMovieImportService _downloadedMovieImportService;
+        private readonly ICustomFormatCalculationService _formatCalculator;
         private readonly IEventAggregator _eventAggregator;
         private readonly Logger _logger;
 
@@ -49,6 +51,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                                    IImportApprovedMovie importApprovedMovie,
                                    ITrackedDownloadService trackedDownloadService,
                                    IDownloadedMovieImportService downloadedMovieImportService,
+                                   ICustomFormatCalculationService formatCalculator,
                                    IEventAggregator eventAggregator,
                                    Logger logger)
         {
@@ -61,6 +64,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
             _importApprovedMovie = importApprovedMovie;
             _trackedDownloadService = trackedDownloadService;
             _downloadedMovieImportService = downloadedMovieImportService;
+            _formatCalculator = formatCalculator;
             _eventAggregator = eventAggregator;
             _logger = logger;
         }
@@ -113,12 +117,13 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 Movie = movie,
                 FileMovieInfo = Parser.Parser.ParseMoviePath(path),
                 DownloadClientMovieInfo = downloadClientItem == null ? null : Parser.Parser.ParseMovieTitle(downloadClientItem.Title),
+                DownloadItem = downloadClientItem,
                 Path = path,
                 SceneSource = SceneSource(movie, rootFolder),
                 ExistingFile = movie.Path.IsParentPath(path),
                 Size = _diskProvider.GetFileSize(path),
-                Languages = (languages?.SingleOrDefault() ?? Language.Unknown) == Language.Unknown ? languageParse : languages,
-                Quality = quality.Quality == Quality.Unknown ? QualityParser.ParseQuality(path) : quality,
+                Languages = languages?.Count <= 1 && (languages?.SingleOrDefault() ?? Language.Unknown) == Language.Unknown ? languageParse : languages,
+                Quality = (quality?.Quality ?? Quality.Unknown) == Quality.Unknown ? QualityParser.ParseQuality(path) : quality,
                 ReleaseGroup = releaseGroup.IsNullOrWhiteSpace() ? Parser.Parser.ParseReleaseGroup(path) : releaseGroup,
             };
 
@@ -128,12 +133,25 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
         private List<ManualImportItem> ProcessFolder(string rootFolder, string baseFolder, string downloadId, int? movieId, bool filterExistingFiles)
         {
             DownloadClientItem downloadClientItem = null;
+            Movie movie = null;
 
             var directoryInfo = new DirectoryInfo(baseFolder);
 
-            var movie = movieId.HasValue ?
-                _movieService.GetMovie(movieId.Value) :
-                _parsingService.GetMovie(directoryInfo.Name);
+            if (movieId.HasValue)
+            {
+                movie = _movieService.GetMovie(movieId.Value);
+            }
+            else
+            {
+                try
+                {
+                    movie = _parsingService.GetMovie(directoryInfo.Name);
+                }
+                catch (MultipleMoviesFoundException e)
+                {
+                    _logger.Warn(e, "Unable to match movie by title");
+                }
+            }
 
             if (downloadId.IsNotNullOrWhiteSpace())
             {
@@ -154,8 +172,10 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 // If the movie is unknown for the directory and there are more than 100 files in the folder don't process the items before returning.
                 var files = _diskScanService.FilterPaths(rootFolder, _diskScanService.GetVideoFiles(baseFolder, false));
 
-                if (files.Count() > 100)
+                if (files.Count > 100)
                 {
+                    _logger.Warn("Unable to determine movie from folder name and found more than 100 files. Skipping parsing");
+
                     return ProcessDownloadDirectory(rootFolder, files);
                 }
 
@@ -236,6 +256,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 Path = file,
                 RelativePath = rootFolder.GetRelativePath(file),
                 Name = Path.GetFileNameWithoutExtension(file),
+                Size = _diskProvider.GetFileSize(file),
                 Rejections = new List<Rejection>()
             };
         }
@@ -289,6 +310,9 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
             if (decision.LocalMovie.Movie != null)
             {
                 item.Movie = decision.LocalMovie.Movie;
+
+                item.CustomFormats = _formatCalculator.ParseCustomFormat(decision.LocalMovie);
+                item.CustomFormatScore = item.Movie.QualityProfile?.CalculateCustomFormatScore(item.CustomFormats) ?? 0;
             }
 
             item.Quality = decision.LocalMovie.Quality;
@@ -307,7 +331,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
             var imported = new List<ImportResult>();
             var importedTrackedDownload = new List<ManuallyImportedFile>();
 
-            for (int i = 0; i < message.Files.Count; i++)
+            for (var i = 0; i < message.Files.Count; i++)
             {
                 _logger.ProgressTrace("Processing file {0} of {1}", i + 1, message.Files.Count);
 
@@ -319,7 +343,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
 
                 var localMovie = new LocalMovie
                 {
-                    ExistingFile = false,
+                    ExistingFile = existingFile,
                     FileMovieInfo = fileMovieInfo,
                     Path = file.Path,
                     Quality = file.Quality,
@@ -333,6 +357,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 {
                     trackedDownload = _trackedDownloadService.Find(file.DownloadId);
                     localMovie.DownloadClientMovieInfo = trackedDownload?.RemoteMovie?.ParsedMovieInfo;
+                    localMovie.DownloadItem = trackedDownload?.DownloadItem;
                 }
 
                 if (file.FolderName.IsNotNullOrWhiteSpace())
@@ -341,7 +366,10 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                     localMovie.SceneSource = !existingFile;
                 }
 
+                // Augment movie file so imported files have all additional information an automatic import would
                 localMovie = _aggregationService.Augment(localMovie, trackedDownload?.DownloadItem);
+                localMovie.CustomFormats = _formatCalculator.ParseCustomFormat(localMovie);
+                localMovie.CustomFormatScore = localMovie.Movie.QualityProfile?.CalculateCustomFormatScore(localMovie.CustomFormats) ?? 0;
 
                 // Apply the user-chosen values.
                 localMovie.Movie = movie;

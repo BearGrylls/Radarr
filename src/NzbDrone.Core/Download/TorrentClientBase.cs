@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using MonoTorrent;
 using NLog;
 using NzbDrone.Common.Disk;
@@ -42,7 +43,7 @@ namespace NzbDrone.Core.Download
         protected abstract string AddFromMagnetLink(RemoteMovie remoteMovie, string hash, string magnetLink);
         protected abstract string AddFromTorrentFile(RemoteMovie remoteMovie, string hash, string filename, byte[] fileContent);
 
-        public override string Download(RemoteMovie remoteMovie)
+        public override async Task<string> Download(RemoteMovie remoteMovie, IIndexer indexer)
         {
             var torrentInfo = remoteMovie.Release as TorrentInfo;
 
@@ -69,7 +70,7 @@ namespace NzbDrone.Core.Download
                 {
                     try
                     {
-                        return DownloadFromWebUrl(remoteMovie, torrentUrl);
+                        return await DownloadFromWebUrl(remoteMovie, indexer, torrentUrl);
                     }
                     catch (Exception ex)
                     {
@@ -115,25 +116,25 @@ namespace NzbDrone.Core.Download
 
                 if (torrentUrl.IsNotNullOrWhiteSpace())
                 {
-                    return DownloadFromWebUrl(remoteMovie, torrentUrl);
+                    return await DownloadFromWebUrl(remoteMovie, indexer, torrentUrl);
                 }
             }
 
             return null;
         }
 
-        private string DownloadFromWebUrl(RemoteMovie remoteMovie, string torrentUrl)
+        private async Task<string> DownloadFromWebUrl(RemoteMovie remoteMovie, IIndexer indexer, string torrentUrl)
         {
             byte[] torrentFile = null;
 
             try
             {
-                var request = new HttpRequest(torrentUrl);
+                var request = indexer?.GetDownloadRequest(torrentUrl) ?? new HttpRequest(torrentUrl);
                 request.RateLimitKey = remoteMovie?.Release?.IndexerId.ToString();
                 request.Headers.Accept = "application/x-bittorrent";
                 request.AllowAutoRedirect = false;
 
-                var response = _httpClient.Get(request);
+                var response = await _httpClient.GetAsync(request);
 
                 if (response.StatusCode == HttpStatusCode.MovedPermanently ||
                     response.StatusCode == HttpStatusCode.Found ||
@@ -150,7 +151,9 @@ namespace NzbDrone.Core.Download
                             return DownloadFromMagnetUrl(remoteMovie, locationHeader);
                         }
 
-                        return DownloadFromWebUrl(remoteMovie, locationHeader);
+                        request.Url += new HttpUri(locationHeader);
+
+                        return await DownloadFromWebUrl(remoteMovie, indexer, request.Url.ToString());
                     }
 
                     throw new WebException("Remote website tried to redirect without providing a location.");

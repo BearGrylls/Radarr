@@ -1,20 +1,22 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Core.DecisionEngine;
-using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using Radarr.Http.REST;
 
 namespace Radarr.Api.V3.Indexers
 {
     public abstract class ReleaseControllerBase : RestController<ReleaseResource>
     {
-        private readonly Profile _qualityProfile;
+        private readonly QualityProfile _qualityProfile;
 
-        public ReleaseControllerBase(IProfileService qualityProfileService)
+        public ReleaseControllerBase(IQualityProfileService qualityProfileService)
         {
             _qualityProfile = qualityProfileService.GetDefaultProfile(string.Empty);
         }
 
+        [NonAction]
         protected override ReleaseResource GetResourceById(int id)
         {
             throw new NotImplementedException();

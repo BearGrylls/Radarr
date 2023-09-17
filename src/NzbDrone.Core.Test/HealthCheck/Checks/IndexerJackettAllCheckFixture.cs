@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Moq;
 using NUnit.Framework;
@@ -39,6 +38,7 @@ namespace NzbDrone.Core.Test.HealthCheck.Checks
             _definition = new IndexerDefinition
             {
                 Name = "Indexer",
+                EnableRss = true,
                 ConfigContract = "TorznabSettings",
                 Settings = torznabSettings
             };

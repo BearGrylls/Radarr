@@ -1,8 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NLog;
-using NLog.Fluent;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
@@ -13,6 +13,7 @@ using NzbDrone.Core.MediaFiles.MovieImport;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Parser;
+using NzbDrone.Core.Parser.Model;
 
 namespace NzbDrone.Core.Download
 {
@@ -68,7 +69,8 @@ namespace NzbDrone.Core.Download
                 return;
             }
 
-            var historyItem = _historyService.MostRecentForDownloadId(trackedDownload.DownloadItem.DownloadId);
+            var grabbedHistories = _historyService.FindByDownloadId(trackedDownload.DownloadItem.DownloadId).Where(h => h.EventType == MovieHistoryEventType.Grabbed).ToList();
+            var historyItem = grabbedHistories.MaxBy(h => h.Date);
 
             if (historyItem == null && trackedDownload.DownloadItem.Category.IsNullOrWhiteSpace())
             {
@@ -92,7 +94,28 @@ namespace NzbDrone.Core.Download
 
                 if (movie == null)
                 {
-                    trackedDownload.Warn("Movie title mismatch, automatic import is not possible.");
+                    trackedDownload.Warn("Movie title mismatch, Manual Import required.");
+                    return;
+                }
+
+                Enum.TryParse(historyItem.Data.GetValueOrDefault(MovieHistory.MOVIE_MATCH_TYPE, MovieMatchType.Unknown.ToString()), out MovieMatchType movieMatchType);
+                Enum.TryParse(historyItem.Data.GetValueOrDefault(MovieHistory.RELEASE_SOURCE, ReleaseSourceType.Unknown.ToString()), out ReleaseSourceType releaseSource);
+
+                // Show a warning if the release was matched by ID and the source is not interactive search
+                if (movieMatchType == MovieMatchType.Id && releaseSource != ReleaseSourceType.InteractiveSearch)
+                {
+                    trackedDownload.Warn("Found matching movie via grab history, but release was matched to movie by ID. Manual Import required.");
+
+                    if (!trackedDownload.HasNotifiedManualInteractionRequired)
+                    {
+                        trackedDownload.HasNotifiedManualInteractionRequired = true;
+
+                        var releaseInfo = new GrabbedReleaseInfo(grabbedHistories);
+                        var manualInteractionEvent = new ManualInteractionRequiredEvent(trackedDownload, releaseInfo);
+
+                        _eventAggregator.PublishEvent(manualInteractionEvent);
+                    }
+
                     return;
                 }
             }
@@ -134,14 +157,33 @@ namespace NzbDrone.Core.Download
                 trackedDownload.Warn("No files found are eligible for import in {0}", outputPath);
             }
 
+            if (importResults.Count == 1)
+            {
+                var firstResult = importResults.First();
+
+                if (firstResult.Result == ImportResultType.Rejected && firstResult.ImportDecision.LocalMovie == null)
+                {
+                    trackedDownload.Warn(new TrackedDownloadStatusMessage(firstResult.Errors.First(), new List<string>()));
+
+                    return;
+                }
+            }
+
+            var statusMessages = new List<TrackedDownloadStatusMessage>
+                                 {
+                                    new TrackedDownloadStatusMessage("One or more movies expected in this release were not imported or missing", new List<string>())
+                                 };
+
             if (importResults.Any(c => c.Result != ImportResultType.Imported))
             {
-                var statusMessages = importResults
+                statusMessages.AddRange(importResults
                     .Where(v => v.Result != ImportResultType.Imported && v.ImportDecision.LocalMovie != null)
-                    .Select(v => new TrackedDownloadStatusMessage(Path.GetFileName(v.ImportDecision.LocalMovie.Path), v.Errors))
-                    .ToArray();
+                    .Select(v => new TrackedDownloadStatusMessage(Path.GetFileName(v.ImportDecision.LocalMovie.Path), v.Errors)));
 
-                trackedDownload.Warn(statusMessages);
+                if (statusMessages.Any())
+                {
+                    trackedDownload.Warn(statusMessages.ToArray());
+                }
             }
         }
 

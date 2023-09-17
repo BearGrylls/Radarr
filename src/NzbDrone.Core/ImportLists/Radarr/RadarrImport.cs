@@ -19,6 +19,7 @@ namespace NzbDrone.Core.ImportLists.Radarr
         public override bool EnableAuto => false;
 
         public override ImportListType ListType => ImportListType.Program;
+        public override TimeSpan MinRefreshInterval => TimeSpan.FromMinutes(15);
 
         public RadarrImport(IRadarrV3Proxy radarrV3Proxy,
                             IImportListStatusService importListStatusService,
@@ -41,16 +42,27 @@ namespace NzbDrone.Core.ImportLists.Radarr
 
                 foreach (var remoteMovie in remoteMovies)
                 {
-                    if ((!Settings.ProfileIds.Any() || Settings.ProfileIds.Contains(remoteMovie.QualityProfileId)) &&
-                        (!Settings.TagIds.Any() || Settings.TagIds.Any(x => remoteMovie.Tags.Any(y => y == x))))
+                    if (Settings.ProfileIds.Any() && !Settings.ProfileIds.Contains(remoteMovie.QualityProfileId))
                     {
-                        movies.Add(new ImportListMovie
-                        {
-                            TmdbId = remoteMovie.TmdbId,
-                            Title = remoteMovie.Title,
-                            Year = remoteMovie.Year
-                        });
+                        continue;
                     }
+
+                    if (Settings.TagIds.Any() && !Settings.TagIds.Any(x => remoteMovie.Tags.Any(y => y == x)))
+                    {
+                        continue;
+                    }
+
+                    if (Settings.RootFolderPaths.Any() && !Settings.RootFolderPaths.Any(rootFolderPath => remoteMovie.Path.ContainsIgnoreCase(rootFolderPath)))
+                    {
+                        continue;
+                    }
+
+                    movies.Add(new ImportListMovie
+                    {
+                        TmdbId = remoteMovie.TmdbId,
+                        Title = remoteMovie.Title,
+                        Year = remoteMovie.Year
+                    });
                 }
 
                 _importListStatusService.RecordSuccess(Definition.Id);
@@ -84,11 +96,11 @@ namespace NzbDrone.Core.ImportLists.Radarr
                 return new
                 {
                     options = devices.OrderBy(d => d.Name, StringComparer.InvariantCultureIgnoreCase)
-                                            .Select(d => new
-                                            {
-                                                Value = d.Id,
-                                                Name = d.Name
-                                            })
+                        .Select(d => new
+                        {
+                            Value = d.Id,
+                            Name = d.Name
+                        })
                 };
             }
 
@@ -99,11 +111,26 @@ namespace NzbDrone.Core.ImportLists.Radarr
                 return new
                 {
                     options = devices.OrderBy(d => d.Label, StringComparer.InvariantCultureIgnoreCase)
-                                            .Select(d => new
-                                            {
-                                                Value = d.Id,
-                                                Name = d.Label
-                                            })
+                        .Select(d => new
+                        {
+                            Value = d.Id,
+                            Name = d.Label
+                        })
+                };
+            }
+
+            if (action == "getRootFolders")
+            {
+                var remoteRootFolders = _radarrV3Proxy.GetRootFolders(Settings);
+
+                return new
+                {
+                    options = remoteRootFolders.OrderBy(d => d.Path, StringComparer.InvariantCultureIgnoreCase)
+                        .Select(d => new
+                        {
+                            Value = d.Path,
+                            Name = d.Path
+                        })
                 };
             }
 
@@ -113,17 +140,6 @@ namespace NzbDrone.Core.ImportLists.Radarr
         protected override void Test(List<ValidationFailure> failures)
         {
             failures.AddIfNotNull(_radarrV3Proxy.Test(Settings));
-        }
-
-        private static MediaCover.MediaCover MapImage(MediaCover.MediaCover arg, string baseUrl)
-        {
-            var newImage = new MediaCover.MediaCover
-            {
-                Url = string.Format("{0}{1}", baseUrl, arg.Url),
-                CoverType = arg.CoverType
-            };
-
-            return newImage;
         }
     }
 }

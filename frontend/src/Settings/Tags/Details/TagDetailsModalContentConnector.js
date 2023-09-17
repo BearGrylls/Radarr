@@ -53,10 +53,10 @@ function createMatchingNotificationsSelector() {
   );
 }
 
-function createMatchingRestrictionsSelector() {
+function createMatchingReleaseProfilesSelector() {
   return createSelector(
-    (state, { restrictionIds }) => restrictionIds,
-    (state) => state.settings.restrictions.items,
+    (state, { releaseProfileIds }) => releaseProfileIds,
+    (state) => state.settings.releaseProfiles.items,
     findMatchingItems
   );
 }
@@ -77,22 +77,42 @@ function createMatchingIndexersSelector() {
   );
 }
 
+function createMatchingDownloadClientsSelector() {
+  return createSelector(
+    (state, { downloadClientIds }) => downloadClientIds,
+    (state) => state.settings.downloadClients.items,
+    findMatchingItems
+  );
+}
+
+function createMatchingAutoTagsSelector() {
+  return createSelector(
+    (state, { autoTagIds }) => autoTagIds,
+    (state) => state.settings.autoTaggings.items,
+    findMatchingItems
+  );
+}
+
 function createMapStateToProps() {
   return createSelector(
     createMatchingMoviesSelector(),
     createMatchingDelayProfilesSelector(),
     createMatchingNotificationsSelector(),
-    createMatchingRestrictionsSelector(),
+    createMatchingReleaseProfilesSelector(),
     createMatchingImportListsSelector(),
     createMatchingIndexersSelector(),
-    (movies, delayProfiles, notifications, restrictions, importLists, indexers) => {
+    createMatchingDownloadClientsSelector(),
+    createMatchingAutoTagsSelector(),
+    (movies, delayProfiles, notifications, releaseProfiles, importLists, indexers, downloadClients, autoTags) => {
       return {
         movies,
         delayProfiles,
         notifications,
-        restrictions,
+        releaseProfiles,
         importLists,
-        indexers
+        indexers,
+        downloadClients,
+        autoTags
       };
     }
   );

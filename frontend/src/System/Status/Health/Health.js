@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Alert from 'Components/Alert';
 import FieldSet from 'Components/FieldSet';
 import Icon from 'Components/Icon';
 import IconButton from 'Components/Link/IconButton';
 import SpinnerIconButton from 'Components/Link/SpinnerIconButton';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
+import InlineMarkdown from 'Components/Markdown/InlineMarkdown';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
@@ -36,6 +38,14 @@ function getInternalLink(source) {
           name={icons.SETTINGS}
           title={translate('Settings')}
           to="/settings/downloadclients"
+        />
+      );
+    case 'NotificationStatusCheck':
+      return (
+        <IconButton
+          name={icons.SETTINGS}
+          title={translate('Settings')}
+          to="/settings/connect"
         />
       );
     case 'RootFolderCheck':
@@ -94,12 +104,12 @@ const columns = [
   },
   {
     name: 'message',
-    label: translate('Message'),
+    label: () => translate('Message'),
     isVisible: true
   },
   {
     name: 'actions',
-    label: translate('Actions'),
+    label: () => translate('Actions'),
     isVisible: true
   }
 ];
@@ -205,6 +215,12 @@ class Health extends Component {
                 }
               </TableBody>
             </Table>
+        }
+        {
+          healthIssues &&
+            <Alert kind={kinds.INFO}>
+              <InlineMarkdown data={translate('HealthMessagesInfoBox', { link: '/system/logs/files' })} />
+            </Alert>
         }
       </FieldSet>
     );

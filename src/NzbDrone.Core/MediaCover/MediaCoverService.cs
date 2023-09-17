@@ -22,7 +22,7 @@ namespace NzbDrone.Core.MediaCover
         Dictionary<string, FileInfo> GetCoverFileInfos();
         void ConvertToLocalUrls(int movieId, IEnumerable<MediaCover> covers, Dictionary<string, FileInfo> fileInfos = null);
         void ConvertToLocalUrls(IEnumerable<Tuple<int, IEnumerable<MediaCover>>> items, Dictionary<string, FileInfo> coverFileInfos);
-        string GetCoverPath(int movieId, MediaCoverTypes mediaCoverTypes, int? height = null);
+        string GetCoverPath(int movieId, MediaCoverTypes coverType, int? height = null);
     }
 
     public class MediaCoverService :
@@ -67,11 +67,11 @@ namespace NzbDrone.Core.MediaCover
             _coverRootFolder = appFolderInfo.GetMediaCoverPath();
         }
 
-        public string GetCoverPath(int movieId, MediaCoverTypes coverTypes, int? height = null)
+        public string GetCoverPath(int movieId, MediaCoverTypes coverType, int? height = null)
         {
             var heightSuffix = height.HasValue ? "-" + height.ToString() : "";
 
-            return Path.Combine(GetMovieCoverPath(movieId), coverTypes.ToString().ToLower() + heightSuffix + ".jpg");
+            return Path.Combine(GetMovieCoverPath(movieId), coverType.ToString().ToLower() + heightSuffix + GetExtension(coverType));
         }
 
         public Dictionary<string, FileInfo> GetCoverFileInfos()
@@ -82,7 +82,7 @@ namespace NzbDrone.Core.MediaCover
             }
 
             return  _diskProvider
-                    .GetFileInfos(_coverRootFolder, SearchOption.AllDirectories)
+                    .GetFileInfos(_coverRootFolder, true)
                     .ToDictionary(x => x.FullName, PathEqualityComparer.Instance);
         }
 
@@ -93,7 +93,6 @@ namespace NzbDrone.Core.MediaCover
                 // Movie isn't in Radarr yet, map via a proxy to circument referrer issues
                 foreach (var mediaCover in covers)
                 {
-                    mediaCover.RemoteUrl = mediaCover.Url;
                     mediaCover.Url = _mediaCoverProxy.RegisterUrl(mediaCover.RemoteUrl);
                 }
             }
@@ -101,10 +100,14 @@ namespace NzbDrone.Core.MediaCover
             {
                 foreach (var mediaCover in covers)
                 {
+                    if (mediaCover.CoverType == MediaCoverTypes.Unknown)
+                    {
+                        continue;
+                    }
+
                     var filePath = GetCoverPath(movieId, mediaCover.CoverType);
 
-                    mediaCover.RemoteUrl = mediaCover.Url;
-                    mediaCover.Url = _configFileProvider.UrlBase + @"/MediaCover/" + movieId + "/" + mediaCover.CoverType.ToString().ToLower() + ".jpg";
+                    mediaCover.Url = _configFileProvider.UrlBase + @"/MediaCover/" + movieId + "/" + mediaCover.CoverType.ToString().ToLower() + GetExtension(mediaCover.CoverType);
 
                     FileInfo file;
                     var fileExists = false;
@@ -142,16 +145,23 @@ namespace NzbDrone.Core.MediaCover
 
         private bool EnsureCovers(Movie movie)
         {
-            bool updated = false;
+            var updated = false;
             var toResize = new List<Tuple<MediaCover, bool>>();
 
             foreach (var cover in movie.MovieMetadata.Value.Images)
             {
+                if (cover.CoverType == MediaCoverTypes.Unknown)
+                {
+                    continue;
+                }
+
                 var fileName = GetCoverPath(movie.Id, cover.CoverType);
                 var alreadyExists = false;
+
                 try
                 {
-                    alreadyExists = _coverExistsSpecification.AlreadyExists(cover.Url, fileName);
+                    alreadyExists = _coverExistsSpecification.AlreadyExists(cover.RemoteUrl, fileName);
+
                     if (!alreadyExists)
                     {
                         DownloadCover(movie, cover);
@@ -195,8 +205,8 @@ namespace NzbDrone.Core.MediaCover
         {
             var fileName = GetCoverPath(movie.Id, cover.CoverType);
 
-            _logger.Info("Downloading {0} for {1} {2}", cover.CoverType, movie, cover.Url);
-            _httpClient.DownloadFile(cover.Url, fileName);
+            _logger.Info("Downloading {0} for {1} {2}", cover.CoverType, movie, cover.RemoteUrl);
+            _httpClient.DownloadFile(cover.RemoteUrl, fileName);
         }
 
         private void EnsureResizedCovers(Movie movie, MediaCover cover, bool forceResize)
@@ -242,6 +252,15 @@ namespace NzbDrone.Core.MediaCover
                     }
                 }
             }
+        }
+
+        private string GetExtension(MediaCoverTypes coverType)
+        {
+            return coverType switch
+            {
+                MediaCoverTypes.Clearlogo => ".png",
+                _ => ".jpg"
+            };
         }
 
         public void HandleAsync(MovieUpdatedEvent message)

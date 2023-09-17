@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NLog;
-using NzbDrone.Common.EnsureThat;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Datastore;
@@ -24,7 +23,6 @@ namespace NzbDrone.Core.Movies
         List<Movie> AddMovies(List<Movie> newMovies);
         Movie FindByImdbId(string imdbid);
         Movie FindByTmdbId(int tmdbid);
-        List<Movie> FindByTmdbId(List<int> tmdbids);
         Movie FindByTitle(string title);
         Movie FindByTitle(string title, int year);
         Movie FindByTitle(List<string> titles, int? year, List<string> otherTitles, List<Movie> candidates);
@@ -37,18 +35,17 @@ namespace NzbDrone.Core.Movies
         List<Movie> GetMoviesByCollectionTmdbId(int collectionId);
         List<Movie> GetMoviesBetweenDates(DateTime start, DateTime end, bool includeUnmonitored);
         PagingSpec<Movie> MoviesWithoutFiles(PagingSpec<Movie> pagingSpec);
-        void SetFileId(Movie movie, MovieFile movieFile);
         void DeleteMovie(int movieId, bool deleteFiles, bool addExclusion = false);
         void DeleteMovies(List<int> movieIds, bool deleteFiles, bool addExclusion = false);
         List<Movie> GetAllMovies();
         Dictionary<int, List<int>> AllMovieTags();
         Movie UpdateMovie(Movie movie);
         List<Movie> UpdateMovie(List<Movie> movie, bool useExistingRelativeFolder);
-        List<Movie> FilterExistingMovies(List<Movie> movies);
         List<int> GetRecommendedTmdbIds();
         bool MoviePathExists(string folder);
         void RemoveAddOptions(Movie movie);
         bool ExistsByMetadataId(int metadataId);
+        HashSet<int> AllMovieWithCollectionsTmdbIds();
     }
 
     public class MovieService : IMovieService, IHandle<MovieFileAddedEvent>,
@@ -124,37 +121,33 @@ namespace NzbDrone.Core.Movies
         {
             var cleanTitles = titles.Select(t => t.CleanMovieTitle().ToLowerInvariant());
 
-            var result = candidates.Where(x => cleanTitles.Contains(x.MovieMetadata.Value.CleanTitle)).FirstWithYear(year);
+            var result = candidates.Where(x => cleanTitles.Contains(x.MovieMetadata.Value.CleanTitle) || cleanTitles.Contains(x.MovieMetadata.Value.CleanOriginalTitle))
+                .AllWithYear(year)
+                .ToList();
 
-            if (result == null)
+            if (result == null || result.Count == 0)
             {
                 result =
-                    candidates.Where(movie => cleanTitles.Contains(movie.MovieMetadata.Value.CleanOriginalTitle)).FirstWithYear(year);
+                    candidates.Where(movie => otherTitles.Contains(movie.MovieMetadata.Value.CleanTitle)).AllWithYear(year).ToList();
             }
 
-            if (result == null)
-            {
-                result =
-                    candidates.Where(movie => otherTitles.Contains(movie.MovieMetadata.Value.CleanTitle)).FirstWithYear(year);
-            }
-
-            if (result == null)
+            if (result == null || result.Count == 0)
             {
                 result = candidates
                     .Where(m => m.MovieMetadata.Value.AlternativeTitles.Any(t => cleanTitles.Contains(t.CleanTitle) ||
                                                         otherTitles.Contains(t.CleanTitle)))
-                    .FirstWithYear(year);
+                    .AllWithYear(year).ToList();
             }
 
-            if (result == null)
+            if (result == null || result.Count == 0)
             {
                 result = candidates
                     .Where(m => m.MovieMetadata.Value.Translations.Any(t => cleanTitles.Contains(t.CleanTitle) ||
                                                         otherTitles.Contains(t.CleanTitle)))
-                    .FirstWithYear(year);
+                    .AllWithYear(year).ToList();
             }
 
-            return result;
+            return ReturnSingleMovieOrThrow(result.ToList());
         }
 
         public List<Movie> FindByTitleCandidates(List<string> titles, out List<string> otherTitles)
@@ -194,11 +187,6 @@ namespace NzbDrone.Core.Movies
         public Movie FindByTmdbId(int tmdbid)
         {
             return _movieRepository.FindByTmdbId(tmdbid);
-        }
-
-        public List<Movie> FindByTmdbId(List<int> tmdbids)
-        {
-            return _movieRepository.FindByTmdbId(tmdbids);
         }
 
         public Movie FindByPath(string path)
@@ -294,12 +282,6 @@ namespace NzbDrone.Core.Movies
             _movieRepository.SetFields(movie, s => s.AddOptions);
         }
 
-        public void SetFileId(Movie movie, MovieFile movieFile)
-        {
-            _movieRepository.SetFileId(movieFile.Id, movie.Id);
-            _logger.Info("Assigning file [{0}] to movie [{1}]", movieFile.RelativePath, movie);
-        }
-
         public List<Movie> GetMoviesByFileId(int fileId)
         {
             return _movieRepository.GetMoviesByFileId(fileId);
@@ -369,22 +351,6 @@ namespace NzbDrone.Core.Movies
             return false;
         }
 
-        public List<Movie> FilterExistingMovies(List<Movie> movies)
-        {
-            var allMovies = GetAllMovies();
-
-            var withTmdbid = movies.Where(m => m.TmdbId != 0).ToList();
-            var withoutTmdbid = movies.Where(m => m.TmdbId == 0).ToList();
-            var withImdbid = withoutTmdbid.Where(m => m.ImdbId.IsNotNullOrWhiteSpace());
-            var rest = withoutTmdbid.Where(m => m.ImdbId.IsNullOrWhiteSpace());
-
-            var ret = withTmdbid.ExceptBy(m => m.TmdbId, allMovies, m => m.TmdbId, EqualityComparer<int>.Default)
-                .Union(withImdbid.ExceptBy(m => m.ImdbId, allMovies, m => m.ImdbId, EqualityComparer<string>.Default))
-                .Union(rest.ExceptBy(m => m.Title.CleanMovieTitle(), allMovies, m => m.MovieMetadata.Value.CleanTitle, EqualityComparer<string>.Default)).ToList();
-
-            return ret;
-        }
-
         public List<int> GetRecommendedTmdbIds()
         {
             return _movieRepository.GetRecommendations();
@@ -393,6 +359,26 @@ namespace NzbDrone.Core.Movies
         public bool ExistsByMetadataId(int metadataId)
         {
             return _movieRepository.ExistsByMetadataId(metadataId);
+        }
+
+        public HashSet<int> AllMovieWithCollectionsTmdbIds()
+        {
+            return _movieRepository.AllMovieWithCollectionsTmdbIds();
+        }
+
+        private Movie ReturnSingleMovieOrThrow(List<Movie> movies)
+        {
+            if (movies.Count == 0)
+            {
+                return null;
+            }
+
+            if (movies.Count == 1)
+            {
+                return movies.First();
+            }
+
+            throw new MultipleMoviesFoundException(movies, "Expected one movie, but found {0}. Matching movies: {1}", movies.Count, string.Join(",", movies));
         }
 
         public void Handle(MovieFileAddedEvent message)

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
-using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 using Radarr.Api.V3.CustomFormats;
 using Radarr.Http.REST;
@@ -22,6 +22,7 @@ namespace Radarr.Api.V3.MovieFiles
         public int IndexerFlags { get; set; }
         public QualityModel Quality { get; set; }
         public List<CustomFormatResource> CustomFormats { get; set; }
+        public int CustomFormatScore { get; set; }
         public MediaInfoResource MediaInfo { get; set; }
         public string OriginalFilePath { get; set; }
         public bool QualityCutoffNotMet { get; set; }
@@ -60,14 +61,14 @@ namespace Radarr.Api.V3.MovieFiles
             };
         }
 
-        public static MovieFileResource ToResource(this MovieFile model, NzbDrone.Core.Movies.Movie movie, IUpgradableSpecification upgradableSpecification)
+        public static MovieFileResource ToResource(this MovieFile model, NzbDrone.Core.Movies.Movie movie, IUpgradableSpecification upgradableSpecification, ICustomFormatCalculationService formatCalculationService)
         {
             if (model == null)
             {
                 return null;
             }
 
-            return new MovieFileResource
+            var resource = new MovieFileResource
             {
                 Id = model.Id,
 
@@ -83,9 +84,21 @@ namespace Radarr.Api.V3.MovieFiles
                 Edition = model.Edition,
                 ReleaseGroup = model.ReleaseGroup,
                 MediaInfo = model.MediaInfo.ToResource(model.SceneName),
-                QualityCutoffNotMet = upgradableSpecification?.QualityCutoffNotMet(movie.Profile, model.Quality) ?? false,
+                QualityCutoffNotMet = upgradableSpecification?.QualityCutoffNotMet(movie.QualityProfile, model.Quality) ?? false,
                 OriginalFilePath = model.OriginalFilePath
             };
+
+            if (formatCalculationService != null)
+            {
+                model.Movie = movie;
+                var customFormats = formatCalculationService?.ParseCustomFormat(model, model.Movie);
+                var customFormatScore = movie?.QualityProfile?.CalculateCustomFormatScore(customFormats) ?? 0;
+
+                resource.CustomFormats = customFormats.ToResource(false);
+                resource.CustomFormatScore = customFormatScore;
+            }
+
+            return resource;
         }
     }
 }

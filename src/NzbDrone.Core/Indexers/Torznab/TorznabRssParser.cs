@@ -4,6 +4,8 @@ using System.Linq;
 using System.Xml.Linq;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Indexers.Exceptions;
+using NzbDrone.Core.Languages;
+using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 
 namespace NzbDrone.Core.Indexers.Torznab
@@ -19,6 +21,12 @@ namespace NzbDrone.Core.Indexers.Torznab
 
         protected override bool PreProcess(IndexerResponse indexerResponse)
         {
+            if (indexerResponse.HttpResponse.HasHttpError &&
+                (indexerResponse.HttpResponse.Headers.ContentType == null || !indexerResponse.HttpResponse.Headers.ContentType.Contains("xml")))
+            {
+                base.PreProcess(indexerResponse);
+            }
+
             var xdoc = LoadXmlDocument(indexerResponse);
             var error = xdoc.Descendants("error").FirstOrDefault();
 
@@ -93,12 +101,34 @@ namespace NzbDrone.Core.Indexers.Torznab
             return ParseUrl(item.TryGetValue("comments"));
         }
 
+        protected override List<Language> GetLanguages(XElement item)
+        {
+            var languages = TryGetMultipleTorznabAttributes(item, "language");
+            var results = new List<Language>();
+
+            // Try to find <language> elements for some indexers that suck at following the rules.
+            if (languages.Count == 0)
+            {
+                languages = item.Elements("language").Select(e => e.Value).ToList();
+            }
+
+            foreach (var language in languages)
+            {
+                var mappedLanguage = IsoLanguages.FindByName(language)?.Language ?? null;
+
+                if (mappedLanguage != null)
+                {
+                    results.Add(mappedLanguage);
+                }
+            }
+
+            return results;
+        }
+
         protected override long GetSize(XElement item)
         {
-            long size;
-
             var sizeString = TryGetTorznabAttribute(item, "size");
-            if (!sizeString.IsNullOrWhiteSpace() && long.TryParse(sizeString, out size))
+            if (!sizeString.IsNullOrWhiteSpace() && long.TryParse(sizeString, out var size))
             {
                 return size;
             }
@@ -178,22 +208,43 @@ namespace NzbDrone.Core.Indexers.Torznab
             IndexerFlags flags = 0;
 
             var downloadFactor = TryGetFloatTorznabAttribute(item, "downloadvolumefactor", 1);
-
             var uploadFactor = TryGetFloatTorznabAttribute(item, "uploadvolumefactor", 1);
-
-            if (uploadFactor == 2)
-            {
-                flags |= IndexerFlags.G_DoubleUpload;
-            }
 
             if (downloadFactor == 0.5)
             {
                 flags |= IndexerFlags.G_Halfleech;
             }
 
+            if (downloadFactor == 0.75)
+            {
+                flags |= IndexerFlags.G_Freeleech25;
+            }
+
+            if (downloadFactor == 0.25)
+            {
+                flags |= IndexerFlags.G_Freeleech75;
+            }
+
             if (downloadFactor == 0.0)
             {
                 flags |= IndexerFlags.G_Freeleech;
+            }
+
+            if (uploadFactor == 2.0)
+            {
+                flags |= IndexerFlags.G_DoubleUpload;
+            }
+
+            var tags = TryGetMultipleTorznabAttributes(item, "tag");
+
+            if (tags.Any(t => t.EqualsIgnoreCase("internal")))
+            {
+                flags |= IndexerFlags.G_Internal;
+            }
+
+            if (tags.Any(t => t.EqualsIgnoreCase("scene")))
+            {
+                flags |= IndexerFlags.G_Scene;
             }
 
             return flags;
@@ -215,14 +266,29 @@ namespace NzbDrone.Core.Indexers.Torznab
         {
             var attr = TryGetTorznabAttribute(item, key, defaultValue.ToString());
 
-            float result = 0;
-
-            if (float.TryParse(attr, out result))
+            if (float.TryParse(attr, out var result))
             {
                 return result;
             }
 
             return defaultValue;
+        }
+
+        protected List<string> TryGetMultipleTorznabAttributes(XElement item, string key)
+        {
+            var attrElements = item.Elements(ns + "attr").Where(e => e.Attribute("name").Value.Equals(key, StringComparison.OrdinalIgnoreCase));
+            var results = new List<string>();
+
+            foreach (var element in attrElements)
+            {
+                var attrValue = element.Attribute("value");
+                if (attrValue != null)
+                {
+                    results.Add(attrValue.Value);
+                }
+            }
+
+            return results;
         }
     }
 }

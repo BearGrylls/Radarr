@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NzbDrone.Core.ImportLists.ImportListMovies;
+using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Movies.Collections;
@@ -17,6 +18,7 @@ namespace Radarr.Api.V3.ImportLists
 
         public string Title { get; set; }
         public string SortTitle { get; set; }
+        public Language OriginalLanguage { get; set; }
         public MovieStatusType Status { get; set; }
         public string Overview { get; set; }
         public DateTime? InCinemas { get; set; }
@@ -34,6 +36,7 @@ namespace Radarr.Api.V3.ImportLists
         public int TmdbId { get; set; }
         public string Folder { get; set; }
         public string Certification { get; set; }
+        public float Popularity { get; set; }
         public List<string> Genres { get; set; }
         public Ratings Ratings { get; set; }
         public MovieCollection Collection { get; set; }
@@ -58,6 +61,7 @@ namespace Radarr.Api.V3.ImportLists
                 TmdbId = model.TmdbId,
                 Title = model.Title,
                 SortTitle = model.MovieMetadata.Value.SortTitle,
+                OriginalLanguage = model.MovieMetadata.Value.OriginalLanguage,
                 InCinemas = model.MovieMetadata.Value.InCinemas,
                 PhysicalRelease = model.MovieMetadata.Value.PhysicalRelease,
                 DigitalRelease = model.MovieMetadata.Value.DigitalRelease,
@@ -75,6 +79,7 @@ namespace Radarr.Api.V3.ImportLists
                 Website = model.MovieMetadata.Value.Website,
                 Genres = model.MovieMetadata.Value.Genres,
                 Ratings = model.MovieMetadata.Value.Ratings,
+                Popularity = model.MovieMetadata.Value.Popularity,
                 YouTubeTrailerId = model.MovieMetadata.Value.YouTubeTrailerId,
                 Collection = new MovieCollection { Title = model.MovieMetadata.Value.CollectionTitle, TmdbId = model.MovieMetadata.Value.CollectionTmdbId },
                 Studio = model.MovieMetadata.Value.Studio
@@ -93,6 +98,7 @@ namespace Radarr.Api.V3.ImportLists
                 TmdbId = model.TmdbId,
                 Title = model.Title,
                 SortTitle = model.MovieMetadata.Value.SortTitle,
+                OriginalLanguage = model.MovieMetadata.Value.OriginalLanguage,
                 InCinemas = model.MovieMetadata.Value.InCinemas,
                 PhysicalRelease = model.MovieMetadata.Value.PhysicalRelease,
                 DigitalRelease = model.MovieMetadata.Value.DigitalRelease,
@@ -111,6 +117,7 @@ namespace Radarr.Api.V3.ImportLists
                 Genres = model.MovieMetadata.Value.Genres,
                 Ratings = model.MovieMetadata.Value.Ratings,
                 YouTubeTrailerId = model.MovieMetadata.Value.YouTubeTrailerId,
+                Popularity = model.MovieMetadata.Value.Popularity,
                 Studio = model.MovieMetadata.Value.Studio,
                 Collection = new MovieCollection { Title = model.MovieMetadata.Value.CollectionTitle, TmdbId = model.MovieMetadata.Value.CollectionTmdbId },
                 Lists = new HashSet<int> { model.ListId }

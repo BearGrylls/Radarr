@@ -18,17 +18,17 @@ import styles from './ImportMovieSelectFolder.css';
 const rootFolderColumns = [
   {
     name: 'path',
-    label: translate('Path'),
+    label: () => translate('Path'),
     isVisible: true
   },
   {
     name: 'freeSpace',
-    label: translate('FreeSpace'),
+    label: () => translate('FreeSpace'),
     isVisible: true
   },
   {
     name: 'unmappedFolders',
-    label: translate('UnmappedFolders'),
+    label: () => translate('UnmappedFolders'),
     isVisible: true
   },
   {
@@ -92,9 +92,9 @@ class ImportMovieSelectFolder extends Component {
 
           {
             !isFetching && error ?
-              <div>
+              <Alert kind={kinds.DANGER}>
                 {translate('UnableToLoadRootFolders')}
-              </div> :
+              </Alert> :
               null
           }
 

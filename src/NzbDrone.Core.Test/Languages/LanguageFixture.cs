@@ -49,6 +49,15 @@ namespace NzbDrone.Core.Test.Languages
                 new object[] { 34, Language.Bengali },
                 new object[] { 35, Language.Slovak },
                 new object[] { 36, Language.Latvian },
+                new object[] { 37, Language.SpanishLatino },
+                new object[] { 38, Language.Catalan },
+                new object[] { 39, Language.Croatian },
+                new object[] { 40, Language.Serbian },
+                new object[] { 41, Language.Bosnian },
+                new object[] { 42, Language.Estonian },
+                new object[] { 43, Language.Tamil },
+                new object[] { 44, Language.Indonesian },
+                new object[] { 45, Language.Telugu }
             };
 
         public static object[] ToIntCases =
@@ -92,6 +101,15 @@ namespace NzbDrone.Core.Test.Languages
                 new object[] { Language.Bengali, 34 },
                 new object[] { Language.Slovak, 35 },
                 new object[] { Language.Latvian, 36 },
+                new object[] { Language.SpanishLatino, 37 },
+                new object[] { Language.Catalan, 38 },
+                new object[] { Language.Croatian, 39 },
+                new object[] { Language.Serbian, 40 },
+                new object[] { Language.Bosnian, 41 },
+                new object[] { Language.Estonian, 42 },
+                new object[] { Language.Tamil, 43 },
+                new object[] { Language.Indonesian, 44 },
+                new object[] { Language.Telugu, 45 }
             };
 
         [Test]

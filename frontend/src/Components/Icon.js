@@ -18,6 +18,7 @@ class Icon extends PureComponent {
       kind,
       size,
       title,
+      darken,
       isSpinning,
       ...otherProps
     } = this.props;
@@ -26,7 +27,8 @@ class Icon extends PureComponent {
       <FontAwesomeIcon
         className={classNames(
           className,
-          styles[kind]
+          styles[kind],
+          darken && 'darken'
         )}
         icon={name}
         spin={isSpinning}
@@ -41,7 +43,7 @@ class Icon extends PureComponent {
       return (
         <span
           className={containerClassName}
-          title={title}
+          title={typeof title === 'function' ? title() : title}
         >
           {icon}
         </span>
@@ -58,7 +60,8 @@ Icon.propTypes = {
   name: PropTypes.object.isRequired,
   kind: PropTypes.string.isRequired,
   size: PropTypes.number.isRequired,
-  title: PropTypes.string,
+  title: PropTypes.oneOfType([PropTypes.string, PropTypes.func]),
+  darken: PropTypes.bool.isRequired,
   isSpinning: PropTypes.bool.isRequired,
   fixedWidth: PropTypes.bool.isRequired
 };
@@ -66,6 +69,7 @@ Icon.propTypes = {
 Icon.defaultProps = {
   kind: kinds.DEFAULT,
   size: 14,
+  darken: false,
   isSpinning: false,
   fixedWidth: false
 };

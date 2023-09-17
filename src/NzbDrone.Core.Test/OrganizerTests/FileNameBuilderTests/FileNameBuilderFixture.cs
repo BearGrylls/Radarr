@@ -12,7 +12,6 @@ using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Movies;
-using NzbDrone.Core.Movies.Collections;
 using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Qualities;
@@ -560,19 +559,6 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
             Subject.BuildFileName(_movie, _movieFile)
                    .Should().Be(string.Format("HDTV-720p{0}South{0}Park", separator));
-        }
-
-        [Test]
-        public void should_be_able_to_use_original_filename()
-        {
-            _movie.Title = "30 Rock";
-            _namingConfig.StandardMovieFormat = "{Movie Title} - {Original Filename}";
-
-            _movieFile.SceneName = "30.Rock.S01E01.xvid-LOL";
-            _movieFile.RelativePath = "30 Rock - S01E01 - Test";
-
-            Subject.BuildFileName(_movie, _movieFile)
-                   .Should().Be("30 Rock - 30 Rock - S01E01 - Test");
         }
 
         [TestCase("en-US")]

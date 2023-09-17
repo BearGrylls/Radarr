@@ -13,6 +13,7 @@ import AddNewDiscoverMovieModal from 'DiscoverMovie/AddNewDiscoverMovieModal';
 import ExcludeMovieModal from 'DiscoverMovie/Exclusion/ExcludeMovieModal';
 import { icons } from 'Helpers/Props';
 import MovieDetailsLinks from 'Movie/Details/MovieDetailsLinks';
+import MoviePopularityIndex from 'Movie/MoviePopularityIndex';
 import formatRuntime from 'Utilities/Date/formatRuntime';
 import translate from 'Utilities/String/translate';
 import ListMovieStatusCell from './ListMovieStatusCell';
@@ -61,6 +62,7 @@ class DiscoverMovieRow extends Component {
       imdbId,
       youTubeTrailerId,
       title,
+      originalLanguage,
       studio,
       inCinemas,
       physicalRelease,
@@ -72,6 +74,7 @@ class DiscoverMovieRow extends Component {
       images,
       genres,
       ratings,
+      popularity,
       certification,
       collection,
       columns,
@@ -169,6 +172,14 @@ class DiscoverMovieRow extends Component {
               );
             }
 
+            if (name === 'originalLanguage') {
+              return (
+                <VirtualTableRowCell key={name} className={styles[name]}>
+                  {originalLanguage.name}
+                </VirtualTableRowCell>
+              );
+            }
+
             if (name === 'studio') {
               return (
                 <VirtualTableRowCell
@@ -248,6 +259,14 @@ class DiscoverMovieRow extends Component {
                   <TmdbRating
                     ratings={ratings}
                   />
+                </VirtualTableRowCell>
+              );
+            }
+
+            if (name === 'popularity') {
+              return (
+                <VirtualTableRowCell key={name} className={styles[name]}>
+                  <MoviePopularityIndex popularity={popularity} />
                 </VirtualTableRowCell>
               );
             }
@@ -363,6 +382,7 @@ DiscoverMovieRow.propTypes = {
   youTubeTrailerId: PropTypes.string,
   status: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
+  originalLanguage: PropTypes.object.isRequired,
   year: PropTypes.number.isRequired,
   overview: PropTypes.string.isRequired,
   folder: PropTypes.string.isRequired,
@@ -374,6 +394,7 @@ DiscoverMovieRow.propTypes = {
   runtime: PropTypes.number,
   genres: PropTypes.arrayOf(PropTypes.string).isRequired,
   ratings: PropTypes.object.isRequired,
+  popularity: PropTypes.number.isRequired,
   certification: PropTypes.string,
   collection: PropTypes.object,
   columns: PropTypes.arrayOf(PropTypes.object).isRequired,

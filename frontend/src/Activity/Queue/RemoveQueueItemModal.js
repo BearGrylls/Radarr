@@ -22,7 +22,8 @@ class RemoveQueueItemModal extends Component {
 
     this.state = {
       remove: true,
-      blocklist: false
+      blocklist: false,
+      skipRedownload: false
     };
   }
 
@@ -32,7 +33,8 @@ class RemoveQueueItemModal extends Component {
   resetState = function() {
     this.setState({
       remove: true,
-      blocklist: false
+      blocklist: false,
+      skipRedownload: false
     });
   };
 
@@ -45,6 +47,10 @@ class RemoveQueueItemModal extends Component {
 
   onBlocklistChange = ({ value }) => {
     this.setState({ blocklist: value });
+  };
+
+  onSkipRedownloadChange = ({ value }) => {
+    this.setState({ skipRedownload: value });
   };
 
   onRemoveConfirmed = () => {
@@ -70,7 +76,7 @@ class RemoveQueueItemModal extends Component {
       isPending
     } = this.props;
 
-    const { remove, blocklist } = this.state;
+    const { remove, blocklist, skipRedownload } = this.state;
 
     return (
       <Modal
@@ -82,12 +88,12 @@ class RemoveQueueItemModal extends Component {
           onModalClose={this.onModalClose}
         >
           <ModalHeader>
-            {translate('Remove')} - {sourceTitle}
+            {translate('RemoveQueueItem', { sourceTitle })}
           </ModalHeader>
 
           <ModalBody>
             <div>
-              {translate('RemoveFromQueueText', [sourceTitle])}
+              {translate('RemoveQueueItemConfirmation', { sourceTitle })}
             </div>
 
             {
@@ -100,7 +106,7 @@ class RemoveQueueItemModal extends Component {
                     type={inputTypes.CHECK}
                     name="remove"
                     value={remove}
-                    helpTextWarning={translate('RemoveHelpTextWarning')}
+                    helpTextWarning={translate('RemoveFromDownloadClientHelpTextWarning')}
                     isDisabled={!canIgnore}
                     onChange={this.onRemoveChange}
                   />
@@ -109,15 +115,30 @@ class RemoveQueueItemModal extends Component {
 
             <FormGroup>
               <FormLabel>{translate('BlocklistRelease')}</FormLabel>
+
               <FormInputGroup
                 type={inputTypes.CHECK}
                 name="blocklist"
                 value={blocklist}
-                helpText={translate('BlocklistHelpText')}
+                helpText={translate('BlocklistReleaseHelpText')}
                 onChange={this.onBlocklistChange}
               />
             </FormGroup>
 
+            {
+              blocklist ?
+                <FormGroup>
+                  <FormLabel>{translate('SkipRedownload')}</FormLabel>
+                  <FormInputGroup
+                    type={inputTypes.CHECK}
+                    name="skipRedownload"
+                    value={skipRedownload}
+                    helpText={translate('SkipRedownloadHelpText')}
+                    onChange={this.onSkipRedownloadChange}
+                  />
+                </FormGroup> :
+                null
+            }
           </ModalBody>
 
           <ModalFooter>
@@ -129,7 +150,7 @@ class RemoveQueueItemModal extends Component {
               kind={kinds.DANGER}
               onPress={this.onRemoveConfirmed}
             >
-              Remove
+              {translate('Remove')}
             </Button>
           </ModalFooter>
         </ModalContent>

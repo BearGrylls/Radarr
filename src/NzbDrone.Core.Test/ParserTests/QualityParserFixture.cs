@@ -19,26 +19,26 @@ namespace NzbDrone.Core.Test.ParserTests
         // public static object[] SelfQualityParserCases = QualityDefinition.DefaultQualityDefinitions.ToArray();
         public static object[] OtherSourceQualityParserCases =
         {
-            new object[] { "SD TV", Source.TV, Resolution.R480p, Modifier.NONE },
-            new object[] { "SD DVD",  Source.DVD, Resolution.R480p, Modifier.NONE },
-            new object[] { "480p WEB-DL", Source.WEBDL, Resolution.R480p, Modifier.NONE },
-            new object[] { "HD TV", Source.TV, Resolution.R720p, Modifier.NONE },
-            new object[] { "1080p HD TV", Source.TV, Resolution.R1080p, Modifier.NONE },
-            new object[] { "2160p HD TV", Source.TV, Resolution.R2160p, Modifier.NONE },
-            new object[] { "720p WEB-DL", Source.WEBDL, Resolution.R720p, Modifier.NONE },
-            new object[] { "1080p WEB-DL", Source.WEBDL, Resolution.R1080p, Modifier.NONE },
-            new object[] { "2160p WEB-DL", Source.WEBDL, Resolution.R2160p, Modifier.NONE },
-            new object[] { "720p BluRay", Source.BLURAY, Resolution.R720p, Modifier.NONE },
-            new object[] { "1080p BluRay", Source.BLURAY, Resolution.R1080p, Modifier.NONE },
-            new object[] { "2160p BluRay", Source.BLURAY, Resolution.R2160p, Modifier.NONE },
-            new object[] { "1080p Remux", Source.BLURAY, Resolution.R1080p, Modifier.REMUX },
-            new object[] { "2160p Remux", Source.BLURAY, Resolution.R2160p, Modifier.REMUX },
+            new object[] { "SD TV", QualitySource.TV, Resolution.R480p, Modifier.NONE },
+            new object[] { "SD DVD",  QualitySource.DVD, Resolution.Unknown, Modifier.NONE },
+            new object[] { "480p WEB-DL", QualitySource.WEBDL, Resolution.R480p, Modifier.NONE },
+            new object[] { "HD TV", QualitySource.TV, Resolution.R720p, Modifier.NONE },
+            new object[] { "1080p HD TV", QualitySource.TV, Resolution.R1080p, Modifier.NONE },
+            new object[] { "2160p HD TV", QualitySource.TV, Resolution.R2160p, Modifier.NONE },
+            new object[] { "720p WEB-DL", QualitySource.WEBDL, Resolution.R720p, Modifier.NONE },
+            new object[] { "1080p WEB-DL", QualitySource.WEBDL, Resolution.R1080p, Modifier.NONE },
+            new object[] { "2160p WEB-DL", QualitySource.WEBDL, Resolution.R2160p, Modifier.NONE },
+            new object[] { "720p BluRay", QualitySource.BLURAY, Resolution.R720p, Modifier.NONE },
+            new object[] { "1080p BluRay", QualitySource.BLURAY, Resolution.R1080p, Modifier.NONE },
+            new object[] { "2160p BluRay", QualitySource.BLURAY, Resolution.R2160p, Modifier.NONE },
+            new object[] { "1080p Remux", QualitySource.BLURAY, Resolution.R1080p, Modifier.REMUX },
+            new object[] { "2160p Remux", QualitySource.BLURAY, Resolution.R2160p, Modifier.REMUX },
         };
 
         [TestCase("Movie.Title.3.2017.720p.TSRip.x264.AAC-Ozlem", false)]
         public void should_parse_ts(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.TELESYNC, proper, Resolution.R720p);
+            ParseAndVerifyQuality(title, QualitySource.TELESYNC, proper, Resolution.R720p);
         }
 
         [TestCase("Movie Name 2018 NEW PROPER 720p HD-CAM X264 HQ-CPG", true)]
@@ -47,7 +47,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Name (2022) New HDCAMRip 1080p [Love Rulz]", false)]
         public void should_parse_cam(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.CAM, proper, Resolution.Unknown);
+            ParseAndVerifyQuality(title, QualitySource.CAM, proper, Resolution.Unknown);
         }
 
         [TestCase("S07E23 .avi ", false)]
@@ -68,7 +68,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Name.S03.TVRip.XviD-NOGRP", false)]
         public void should_parse_sdtv_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.TV, proper, Resolution.R480p);
+            ParseAndVerifyQuality(title, QualitySource.TV, proper, Resolution.R480p);
         }
 
         [TestCase("Some.Movie.S03E06.DVDRip.XviD-WiDE", false)]
@@ -79,16 +79,19 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("SomeMovie.2018.DVDRip.ts", false)]
         public void should_parse_dvd_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.DVD, proper, Resolution.R480p);
+            ParseAndVerifyQuality(title, QualitySource.DVD, proper, Resolution.Unknown);
         }
 
         [TestCase("Some.Movie.Magic.Rainbow.2007.DVD5.NTSC", false)]
         [TestCase("Some.Movie.Magic.Rainbow.2007.DVD9.NTSC", false)]
         [TestCase("Some.Movie.Magic.Rainbow.2007.DVDR.NTSC", false)]
         [TestCase("Some.Movie.Magic.Rainbow.2007.DVD-R.NTSC", false)]
+        [TestCase("Some.Movie.2020.PAL.2xDVD9", false)]
+        [TestCase("Some.Movie.2000.2DVD5", false)]
+        [TestCase("Some.Movie.2005.PAL.MDVDR-SOMegRoUP", false)]
         public void should_parse_dvdr_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.DVD, proper, Resolution.R480p, Modifier.REMUX);
+            ParseAndVerifyQuality(title, QualitySource.DVD, proper, Resolution.R480p, Modifier.REMUX);
         }
 
         [TestCase("Movie.Name.S01E10.The.Leviathan.480p.WEB-DL.x264-mSD", false)]
@@ -100,13 +103,13 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("[Erai-raws] Movie Title [540p][Multiple Subtitle].mkv", false)]
         public void should_parse_webdl480p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBDL, proper, Resolution.R480p);
+            ParseAndVerifyQuality(title, QualitySource.WEBDL, proper, Resolution.R480p);
         }
 
         [TestCase("Movie.Name.1x04.ITA.WEBMux.x264-NovaRip", false)]
         public void should_parse_webrip480p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBRIP, proper, Resolution.R480p);
+            ParseAndVerifyQuality(title, QualitySource.WEBRIP, proper, Resolution.R480p);
         }
 
         [TestCase("Movie.Name (BD)(640x480(RAW) (BATCH 1) (1-13)", false)]
@@ -115,7 +118,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Name.2011.LIMITED.BluRay.360p.H264-20-40", false)]
         public void should_parse_bluray480p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, proper, Resolution.R480p);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, proper, Resolution.R480p);
         }
 
         [TestCase("Movie Name - S01E01 - Title [HDTV]", false)]
@@ -131,7 +134,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Name.The.Lost.Pilots.Movie.HR.WS.PDTV.x264-DHD-Remux.mkv", false)]
         public void should_parse_hdtv720p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.TV, proper, Resolution.R720p);
+            ParseAndVerifyQuality(title, QualitySource.TV, proper, Resolution.R720p);
         }
 
         [TestCase("Movie Name.S07E01.ARE.YOU.1080P.HDTV.X264-QCF", false)]
@@ -141,7 +144,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Name.2020.1080i.HDTV.DD5.1.H.264-NOGRP", false)]
         public void should_parse_hdtv1080p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.TV, proper, Resolution.R1080p);
+            ParseAndVerifyQuality(title, QualitySource.TV, proper, Resolution.R1080p);
         }
 
         [TestCase("Movie Name S01E04 Mexicos Death Train 720p WEB DL", false)]
@@ -164,14 +167,14 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Title.2021.DP.WEB.720p.DDP.5.1.H.264.PLEX", false)]
         public void should_parse_webdl720p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBDL, proper, Resolution.R720p);
+            ParseAndVerifyQuality(title, QualitySource.WEBDL, proper, Resolution.R720p);
         }
 
         [TestCase("Movie.Title.ITA.720p.WEBMux.x264-NovaRip", false)]
         [TestCase("Movie Name.S04E01.720p.WEBRip.AAC2.0.x264-NFRiP", false)]
         public void should_parse_webrip720p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBRIP, proper, Resolution.R720p);
+            ParseAndVerifyQuality(title, QualitySource.WEBRIP, proper, Resolution.R720p);
         }
 
         [TestCase("Movie Name S09E03 1080p WEB DL DD5 1 H264 NFHD", false)]
@@ -203,7 +206,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Title 2018 (WEB 1080p HEVC Opus) [Netaro]", false)]
         public void should_parse_webdl1080p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBDL, proper, Resolution.R1080p);
+            ParseAndVerifyQuality(title, QualitySource.WEBDL, proper, Resolution.R1080p);
         }
 
         [TestCase("Movie.Name.S04E01.iNTERNAL.1080p.WEBRip.x264-QRUS", false)]
@@ -212,7 +215,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Title.2019.1080p.AMZN.WEB-Rip.DDP.5.1.HEVC", false)]
         public void should_parse_webrip1080p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBRIP, proper, Resolution.R1080p);
+            ParseAndVerifyQuality(title, QualitySource.WEBRIP, proper, Resolution.R1080p);
         }
 
         [TestCase("Movie.Name.2016.03.14.2160p.WEB.x264-spamTV", false)]
@@ -223,7 +226,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("The.Movie.2022.NORDiC.2160p.DV.HDR.WEB.H.265-NiDHUG", false)]
         public void should_parse_webdl2160p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBDL, proper, Resolution.R2160p);
+            ParseAndVerifyQuality(title, QualitySource.WEBDL, proper, Resolution.R2160p);
         }
 
         [TestCase("Movie Name S01E01.2160P AMZN WEBRIP DD2.0 HI10P X264-TROLLUHD", false)]
@@ -232,7 +235,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Name S01E01 2160p AMZN WEBRip DD2.0 Hi10P x264-TrollUHD", false)]
         public void should_parse_webrip2160p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.WEBRIP, proper, Resolution.R2160p);
+            ParseAndVerifyQuality(title, QualitySource.WEBRIP, proper, Resolution.R2160p);
         }
 
         [TestCase("Movie.Name.S03E01-06.DUAL.Bluray.AC3.-HELLYWOOD.avi", false)]
@@ -252,9 +255,10 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Name.2019.720p.MBLURAY.x264-MBLURAYFANS.mkv", false)]
         [TestCase("Movie.Name2017.720p.MBluRay.x264-TREBLE.mkv", false)]
         [TestCase("Movie.Name.2.Parte.2.ITA-ENG.720p.BDMux.DD5.1.x264-DarkSideMux", false)]
+        [TestCase("Movie.Hunter.2018.720p.Blu-ray.Remux.AVC.FLAC.2.0-SiCFoI", false)]
         public void should_parse_bluray720p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, proper, Resolution.R720p);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, proper, Resolution.R720p);
         }
 
         [TestCase("Movie Title - S01E03 - Come Fly With Me - 1080p BluRay.mkv", false)]
@@ -274,11 +278,10 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Name.2011.1080p.UHD.BluRay.DD5.1.HDR.x265-CtrlHD.mkv", false)]
         [TestCase("Movie.Name.2016.German.DTS.DL.1080p.UHDBD.x265-TDO.mkv", false)]
         [TestCase("Movie.Name.2021.1080p.BDLight.x265-AVCDVD", false)]
-        [TestCase("Random.Title.2010.1080p.HD.DVD.AVC.DDP.5.1-GRouP", false)]
         [TestCase("Movie.Title.2012.German.DL.1080p.UHD2BD.x264-QfG", false)]
         public void should_parse_bluray1080p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, proper, Resolution.R1080p);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, proper, Resolution.R1080p);
         }
 
         [TestCase("Movie.S01E02.Chained.Heat.[Bluray2160p].mkv", false)]
@@ -296,20 +299,20 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Title.2014.2160p.BDRip.AAC.7.1.HDR10.x265.10bit-Markll", false)]
         public void should_parse_bluray2160p_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, proper, Resolution.R2160p);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, proper, Resolution.R2160p);
         }
 
         [TestCase("Movie.Name.2004.576p.BDRip.x264-HANDJOB")]
         [TestCase("Movie.Title.S01E05.576p.BluRay.DD5.1.x264-HiSD")]
         public void should_parse_bluray576p_quality(string title)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, false, Resolution.R576p);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R576p);
         }
 
         [TestCase("Movie.1993.720p.BluRay.REMUX.AVC.FLAC.2.0-BLURANiUM")]
         public void should_parse_remux720p_as_bluray720p_quality(string title)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, false, Resolution.R720p);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R720p);
         }
 
         [TestCase("Movie.Title.2016.REMUX.1080p.BluRay.AVC.DTS-HD.MA.5.1-iFT")]
@@ -320,9 +323,10 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Title.II.2003.4K.BluRay.Remux.1080p.AVC.DTS-HD.MA.5.1-BMF")]
         [TestCase("Movie Title 2022 (BDRemux 1080p HEVC FLAC) [Netaro]")]
         [TestCase("[Vodes] Movie Title - Other Title (2020) [BDRemux 1080p HEVC Dual-Audio]")]
+        [TestCase("This.Wonderful.Movie.1991.German.ML.1080p.BluRay.AVC-GeRMaNSCeNEGRoUP")]
         public void should_parse_remux1080p_quality(string title)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, false, Resolution.R1080p, Modifier.REMUX);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R1080p, Modifier.REMUX);
         }
 
         [TestCase("Movie.Title.2016.REMUX.2160p.BluRay.AVC.DTS-HD.MA.5.1-iFT")]
@@ -332,9 +336,10 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("[Dolby Vision] Movie.Title.S07.MULTi.UHD.BLURAY.REMUX.DV-NoTag")]
         [TestCase("Movie.Name.2020.German.UHDBD.2160p.HDR10.HEVC.EAC3.DL.Remux-pmHD.mkv")]
         [TestCase("Movie Name (2021) [Remux-2160p x265 HDR 10-BIT DTS-HD MA 7.1]-FraMeSToR.mkv")]
+        [TestCase("This.Wonderful.Movie.1991.German.ML.2160p.BluRay.HEVC-GeRMaNSCeNEGRoUP")]
         public void should_parse_remux2160p_quality(string title)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, false, Resolution.R2160p, Modifier.REMUX);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R2160p, Modifier.REMUX);
         }
 
         [TestCase("Movie.Title.2013.BDISO")]
@@ -343,16 +348,32 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Name.1993..BD25.ISO")]
         [TestCase("Movie.Title.2012.Bluray.1080p.3D.AVC.DTS-HD.MA.5.1.iso")]
         [TestCase("Movie.Title.1996.Bluray.ISO")]
+        [TestCase("Random.Title.2010.1080p.HD.DVD.AVC.DDP.5.1-GRouP")]
+        [TestCase("Movie Title 2005 1080p USA Blu-ray AVC DTS-HD MA 5.1-PTP")]
+        [TestCase("Movie Title 2014 1080p Blu-ray AVC DTS-HD MA 5.1-PTP")]
+        [TestCase("Movie Title 1976 2160p UHD Blu-ray DTS-HD MA 5.1 DV HDR HEVC-UNTOUCHED")]
+        [TestCase("Movie Title 2004 1080p FRA Blu-ray VC-1 TrueHD 5.1-HDBEE")]
+        [TestCase("BD25.Movie.Title.1994.1080p.DTS-HD")]
+        [TestCase("Movie.Title.1997.1080p.NL.BD-50")]
+        [TestCase("Movie Title 2009 3D BD 2009 UNTOUCHED")]
+        [TestCase("Movie.Title.1982.1080p.HD.DVD.VC-1.DD+.5.1")]
+        [TestCase("Movie.Title.2007.1080p.HD.DVD.DD+.AVC")]
+        [TestCase("Movie.Title.2008.1080i.XXX.Blu-ray.MPEG-2.LPCM2.0.ISO")]
+        [TestCase("Movie.Title.2008.BONUS.GERMAN.SUBBED.COMPLETE.BLURAY")]
+        [TestCase("The German 2021 Bluray AVC")]
+        [TestCase("German.Only.Movie.2021.French.1080p.BluRay.AVC-UNTAVC")]
+        [TestCase("Movie.Title.2008.US.Directors.Cut.UHD.BD66.Blu-ray")]
+        [TestCase("Movie.2009.Blu.ray.AVC.DTS.HD.MA.5.1")]
         public void should_parse_brdisk_1080p_quality(string title)
         {
-            ParseAndVerifyQuality(title, Source.BLURAY, false, Resolution.R1080p, Modifier.BRDISK);
+            ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R1080p, Modifier.BRDISK);
         }
 
         [TestCase("Movie.Title.2015.Open.Matte.1080i.HDTV.DD5.1.MPEG2", false)]
         [TestCase("Movie.Title.2009.1080i.HDTV.AAC2.0.MPEG2-PepelefuF", false)]
         public void should_parse_raw_quality(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.TV, proper, Resolution.R1080p, Modifier.RAWHD);
+            ParseAndVerifyQuality(title, QualitySource.TV, proper, Resolution.R1080p, Modifier.RAWHD);
         }
 
         [TestCase("Some.Movie.S02E15", false)]
@@ -361,7 +382,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie.Title.S01E01.The.Web.MT-dd", false)]
         public void quality_parse(string title, bool proper)
         {
-            ParseAndVerifyQuality(title, Source.UNKNOWN, proper, Resolution.Unknown);
+            ParseAndVerifyQuality(title, QualitySource.UNKNOWN, proper, Resolution.Unknown);
         }
 
         /*[Test, TestCaseSource("SelfQualityParserCases")]
@@ -380,7 +401,7 @@ namespace NzbDrone.Core.Test.ParserTests
 
         [Test]
         [TestCaseSource("OtherSourceQualityParserCases")]
-        public void should_parse_quality_from_other_source(string qualityString, Source source, Resolution resolution, Modifier modifier = Modifier.NONE)
+        public void should_parse_quality_from_other_source(string qualityString, QualitySource source, Resolution resolution, Modifier modifier = Modifier.NONE)
         {
             foreach (var c in new char[] { '-', '.', ' ', '_' })
             {
@@ -452,30 +473,20 @@ namespace NzbDrone.Core.Test.ParserTests
             result.ResolutionDetectionSource.Should().Be(QualityDetectionSource.Name);
         }
 
-        [TestCase("Movie.Title.2016.1080p.KORSUB.WEBRip.x264.AAC2.0-RADARR", "KORSUB")]
-        [TestCase("Movie.Title.2016.1080p.KORSUBS.WEBRip.x264.AAC2.0-RADARR", "KORSUBS")]
-        [TestCase("Movie Title 2017 HC 720p HDRiP DD5 1 x264-LEGi0N", "Generic Hardcoded Subs")]
-        [TestCase("Movie.Title.2017.720p.SUBBED.HDRip.V2.XViD-26k.avi", "Generic Hardcoded Subs")]
-        [TestCase("Movie.Title.2000.1080p.BlueRay.x264.DTS.RoSubbed-playHD", null)]
-        [TestCase("Movie Title! 2018 [Web][MKV][h264][480p][AAC 2.0][Softsubs]", null)]
-        [TestCase("Movie Title! 2019 [HorribleSubs][Web][MKV][h264][848x480][AAC 2.0][Softsubs(HorribleSubs)]", null)]
-        public void should_parse_hardcoded_subs(string postTitle, string sub)
-        {
-            QualityParser.ParseQuality(postTitle).HardcodedSubs.Should().Be(sub);
-        }
-
-        [TestCase("Movie Title 2018 REPACK 720p x264 aAF", true)]
-        [TestCase("Movie.Title.2018.REPACK.720p.x264-aAF", true)]
-        [TestCase("Movie.Title.2018.PROPER.720p.x264-aAF", false)]
-        [TestCase("Movie.Title.2018.RERIP.720p.BluRay.x264-DEMAND", true)]
-        public void should_be_able_to_parse_repack(string title, bool isRepack)
+        [TestCase("Movie Title 2018 REPACK 720p HDTV x264 aAF", true, 2)]
+        [TestCase("Movie.Title.2018.REPACK.720p.HDTV.x264-aAF", true, 2)]
+        [TestCase("Movie.Title.2018.REPACK2.720p.HDTV.x264-aAF", true, 3)]
+        [TestCase("Movie.Title.2018.PROPER.720p.HDTV.x264-aAF", false, 2)]
+        [TestCase("Movie.Title.2018.RERIP.720p.BluRay.x264-DEMAND", true, 2)]
+        [TestCase("Movie.Title.2018.RERIP2.720p.BluRay.x264-DEMAND", true, 3)]
+        public void should_be_able_to_parse_repack(string title, bool isRepack, int version)
         {
             var result = QualityParser.ParseQuality(title);
-            result.Revision.Version.Should().Be(2);
+            result.Revision.Version.Should().Be(version);
             result.Revision.IsRepack.Should().Be(isRepack);
         }
 
-        private void ParseAndVerifyQuality(string title, Source source, bool proper, Resolution resolution, Modifier modifier = Modifier.NONE)
+        private void ParseAndVerifyQuality(string title, QualitySource source, bool proper, Resolution resolution, Modifier modifier = Modifier.NONE)
         {
             var result = QualityParser.ParseQuality(title);
             if (resolution != Resolution.Unknown)

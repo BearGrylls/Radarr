@@ -5,6 +5,7 @@ using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles.MovieImport.Manual;
 using NzbDrone.Core.Qualities;
+using Radarr.Api.V3.CustomFormats;
 using Radarr.Api.V3.Movies;
 using Radarr.Http.REST;
 
@@ -23,6 +24,8 @@ namespace Radarr.Api.V3.ManualImport
         public string ReleaseGroup { get; set; }
         public int QualityWeight { get; set; }
         public string DownloadId { get; set; }
+        public List<CustomFormatResource> CustomFormats { get; set; }
+        public int CustomFormatScore { get; set; }
         public IEnumerable<Rejection> Rejections { get; set; }
     }
 
@@ -35,6 +38,9 @@ namespace Radarr.Api.V3.ManualImport
                 return null;
             }
 
+            var customFormats = model.CustomFormats;
+            var customFormatScore = model.Movie?.QualityProfile?.CalculateCustomFormatScore(customFormats) ?? 0;
+
             return new ManualImportResource
             {
                 Id = HashConverter.GetHashInt31(model.Path),
@@ -44,9 +50,11 @@ namespace Radarr.Api.V3.ManualImport
                 Name = model.Name,
                 Size = model.Size,
                 Movie = model.Movie.ToResource(0),
+                ReleaseGroup = model.ReleaseGroup,
                 Quality = model.Quality,
                 Languages = model.Languages,
-                ReleaseGroup = model.ReleaseGroup,
+                CustomFormats = customFormats.ToResource(false),
+                CustomFormatScore = customFormatScore,
 
                 // QualityWeight
                 DownloadId = model.DownloadId,

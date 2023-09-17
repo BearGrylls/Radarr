@@ -28,14 +28,14 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
         private readonly IDetectXbmcNfo _detectNfo;
         private readonly IDiskProvider _diskProvider;
         private readonly ICreditService _creditService;
-        private readonly ITagService _tagService;
+        private readonly ITagRepository _tagRepository;
         private readonly IMovieTranslationService _movieTranslationsService;
 
         public XbmcMetadata(IDetectXbmcNfo detectNfo,
                             IDiskProvider diskProvider,
                             IMapCoversToLocal mediaCoverService,
                             ICreditService creditService,
-                            ITagService tagService,
+                            ITagRepository tagRepository,
                             IMovieTranslationService movieTranslationsService,
                             Logger logger)
         {
@@ -44,7 +44,7 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
             _diskProvider = diskProvider;
             _detectNfo = detectNfo;
             _creditService = creditService;
-            _tagService = tagService;
+            _tagRepository = tagRepository;
             _movieTranslationsService = movieTranslationsService;
         }
 
@@ -208,14 +208,14 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
 
                     if (thumbnail != null)
                     {
-                        details.Add(new XElement("thumb", thumbnail.Url));
+                        details.Add(new XElement("thumb", thumbnail.RemoteUrl));
                     }
 
                     foreach (var poster in posters)
                     {
-                        if (poster != null && poster.Url != null)
+                        if (poster != null && poster.RemoteUrl != null)
                         {
-                            details.Add(new XElement("thumb", new XAttribute("aspect", "poster"), new XAttribute("preview", poster.Url), poster.Url));
+                            details.Add(new XElement("thumb", new XAttribute("aspect", "poster"), new XAttribute("preview", poster.RemoteUrl), poster.RemoteUrl));
                         }
                     }
 
@@ -224,9 +224,9 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                         var fanartElement = new XElement("fanart");
                         foreach (var fanart in fanarts)
                         {
-                            if (fanart != null && fanart.Url != null)
+                            if (fanart != null && fanart.RemoteUrl != null)
                             {
-                                fanartElement.Add(new XElement("thumb", new XAttribute("preview", fanart.Url), fanart.Url));
+                                fanartElement.Add(new XElement("thumb", new XAttribute("preview", fanart.RemoteUrl), fanart.RemoteUrl));
                             }
                         }
 
@@ -273,7 +273,7 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                         details.Add(setElement);
                     }
 
-                    var tags = _tagService.GetTags(movie.Tags);
+                    var tags = _tagRepository.Get(movie.Tags);
 
                     foreach (var tag in tags)
                     {
@@ -366,9 +366,9 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
 
                                 var headshot = credit.Images.FirstOrDefault(m => m.CoverType == MediaCoverTypes.Headshot);
 
-                                if (headshot != null && headshot.Url != null)
+                                if (headshot != null && headshot.RemoteUrl != null)
                                 {
-                                    actorElement.Add(new XElement("thumb", headshot.Url));
+                                    actorElement.Add(new XElement("thumb", headshot.RemoteUrl));
                                 }
 
                                 details.Add(actorElement);

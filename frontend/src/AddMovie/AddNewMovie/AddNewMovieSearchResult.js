@@ -113,6 +113,7 @@ class AddNewMovieSearchResult extends Component {
                     images={images}
                     size={250}
                     overflow={true}
+                    lazy={false}
                   />
                 </div>
 
@@ -122,7 +123,7 @@ class AddNewMovieSearchResult extends Component {
                       monitored={monitored}
                       hasFile={hasFile}
                       status={status}
-                      posterWidth={posterWidth}
+                      width={posterWidth}
                       detailedProgressBar={true}
                       queueStatus={queueStatus}
                       queueState={queueState}

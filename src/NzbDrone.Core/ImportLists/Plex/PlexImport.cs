@@ -15,6 +15,7 @@ namespace NzbDrone.Core.ImportLists.Plex
     {
         public readonly IPlexTvService _plexTvService;
         public override ImportListType ListType => ImportListType.Plex;
+        public override TimeSpan MinRefreshInterval => TimeSpan.FromHours(6);
 
         public PlexImport(IPlexTvService plexTvService,
                                   IHttpClient httpClient,
@@ -28,6 +29,7 @@ namespace NzbDrone.Core.ImportLists.Plex
         }
 
         public override string Name => "Plex Watchlist";
+        public override int PageSize => 50;
         public override bool Enabled => true;
         public override bool EnableAuto => false;
 
@@ -35,8 +37,7 @@ namespace NzbDrone.Core.ImportLists.Plex
         {
             Settings.Validate().Filter("AccessToken").ThrowOnError();
 
-            var generator = GetRequestGenerator();
-            return FetchMovies(generator.GetMovies());
+            return FetchMovies(g => g.GetMovies());
         }
 
         public override IParseImportListResponse GetParser()
@@ -46,7 +47,7 @@ namespace NzbDrone.Core.ImportLists.Plex
 
         public override IImportListRequestGenerator GetRequestGenerator()
         {
-            return new PlexListRequestGenerator(_plexTvService)
+            return new PlexListRequestGenerator(_plexTvService, PageSize)
             {
                 Settings = Settings
             };

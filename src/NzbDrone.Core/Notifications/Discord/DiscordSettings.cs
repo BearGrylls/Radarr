@@ -19,8 +19,9 @@ namespace NzbDrone.Core.Notifications.Discord
         public DiscordSettings()
         {
             // Set Default Fields
-            GrabFields = new List<int> { 0, 1, 2, 3, 5, 6, 7, 8, 9 };
-            ImportFields = new List<int> { 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12 };
+            GrabFields = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+            ImportFields = new[] { 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12 };
+            ManualInteractionFields = new[] { 0, 1, 2, 3, 5, 6, 7, 8, 9 };
         }
 
         private static readonly DiscordSettingsValidator Validator = new DiscordSettingsValidator();
@@ -34,7 +35,7 @@ namespace NzbDrone.Core.Notifications.Discord
         [FieldDefinition(2, Label = "Avatar", HelpText = "Change the avatar that is used for messages from this integration", Type = FieldType.Textbox)]
         public string Avatar { get; set; }
 
-        [FieldDefinition(3, Label = "Host", Advanced = true, HelpText = "Override the Host that shows for this notification, Blank is machine name", Type = FieldType.Textbox)]
+        [FieldDefinition(3, Label = "Author", Advanced = true, HelpText = "Override the embed author that shows for this notification, Blank is instance name", Type = FieldType.Textbox)]
         public string Author { get; set; }
 
         [FieldDefinition(4, Label = "On Grab Fields", Advanced = true, SelectOptions = typeof(DiscordGrabFieldType), HelpText = "Change the fields that are passed in for this 'on grab' notification", Type = FieldType.TagSelect)]
@@ -42,6 +43,9 @@ namespace NzbDrone.Core.Notifications.Discord
 
         [FieldDefinition(5, Label = "On Import Fields", Advanced = true, SelectOptions = typeof(DiscordImportFieldType), HelpText = "Change the fields that are passed for this 'on import' notification", Type = FieldType.TagSelect)]
         public IEnumerable<int> ImportFields { get; set; }
+
+        [FieldDefinition(6, Label = "On Manual Interaction Fields", Advanced = true, SelectOptions = typeof(DiscordManualInteractionFieldType), HelpText = "Change the fields that are passed for this 'on manual interaction' notification", Type = FieldType.TagSelect)]
+        public IEnumerable<int> ManualInteractionFields { get; set; }
 
         public NzbDroneValidationResult Validate()
         {

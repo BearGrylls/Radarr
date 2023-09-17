@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
@@ -15,7 +14,7 @@ namespace NzbDrone.Core.Test.Datastore.Migration
     [TestFixture]
     public class custom_formatsFixture : MigrationTest<add_custom_formats>
     {
-        public static Dictionary<int, int> QualityToDefinition = null;
+        public static Dictionary<int, int> QualityToDefinition;
 
         public void AddDefaultProfile(add_custom_formats m, string name, Quality cutoff, params Quality[] allowed)
         {

@@ -1,5 +1,7 @@
+using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
 using NUnit.Framework;
@@ -26,23 +28,23 @@ namespace NzbDrone.Core.Test.IndexerTests.PTPTests
         }
 
         [TestCase("Files/Indexers/PTP/imdbsearch.json")]
-        public void should_parse_feed_from_PTP(string fileName)
+        public async Task should_parse_feed_from_PTP(string fileName)
         {
             var authResponse = new PassThePopcornAuthResponse { Result = "Ok" };
 
-            System.IO.StringWriter authStream = new System.IO.StringWriter();
+            var authStream = new System.IO.StringWriter();
             Json.Serialize(authResponse, authStream);
             var responseJson = ReadAllText(fileName);
 
             Mocker.GetMock<IHttpClient>()
-                  .Setup(o => o.Execute(It.Is<HttpRequest>(v => v.Method == HttpMethod.Post)))
-                  .Returns<HttpRequest>(r => new HttpResponse(r, new HttpHeader(), authStream.ToString()));
+                  .Setup(o => o.ExecuteAsync(It.Is<HttpRequest>(v => v.Method == HttpMethod.Post)))
+                  .Returns<HttpRequest>(r => Task.FromResult(new HttpResponse(r, new HttpHeader(), authStream.ToString())));
 
             Mocker.GetMock<IHttpClient>()
-                .Setup(o => o.Execute(It.Is<HttpRequest>(v => v.Method == HttpMethod.Get)))
-                  .Returns<HttpRequest>(r => new HttpResponse(r, new HttpHeader { ContentType = HttpAccept.Json.Value }, responseJson));
+                .Setup(o => o.ExecuteAsync(It.Is<HttpRequest>(v => v.Method == HttpMethod.Get)))
+                  .Returns<HttpRequest>(r => Task.FromResult(new HttpResponse(r, new HttpHeader { ContentType = HttpAccept.Json.Value }, responseJson)));
 
-            var torrents = Subject.FetchRecent();
+            var torrents = await Subject.FetchRecent();
 
             torrents.Should().HaveCount(293);
             torrents.First().Should().BeOfType<PassThePopcornInfo>();
@@ -55,7 +57,7 @@ namespace NzbDrone.Core.Test.IndexerTests.PTPTests
             first.DownloadUrl.Should().Be("https://passthepopcorn.me/torrents.php?action=download&id=452135&authkey=00000000000000000000000000000000&torrent_pass=00000000000000000000000000000000");
             first.InfoUrl.Should().Be("https://passthepopcorn.me/torrents.php?id=148131&torrentid=452135");
 
-            // first.PublishDate.Should().Be(DateTime.Parse("2017-04-17T12:13:42+0000").ToUniversalTime()); stupid timezones
+            first.PublishDate.Should().Be(DateTime.Parse("2016-10-18T23:40:59+0000").ToUniversalTime());
             first.Size.Should().Be(2466170624L);
             first.InfoHash.Should().BeNullOrEmpty();
             first.MagnetUrl.Should().BeNullOrEmpty();

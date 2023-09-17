@@ -3,18 +3,18 @@ using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
-using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.DecisionEngine.Specifications
 {
     public interface IUpgradableSpecification
     {
-        bool IsUpgradable(Profile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats);
-        bool CutoffNotMet(Profile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null);
-        bool QualityCutoffNotMet(Profile profile, QualityModel currentQuality, QualityModel newQuality = null);
+        bool IsUpgradable(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats);
+        bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null);
+        bool QualityCutoffNotMet(QualityProfile profile, QualityModel currentQuality, QualityModel newQuality = null);
         bool IsRevisionUpgrade(QualityModel currentQuality, QualityModel newQuality);
-        bool IsUpgradeAllowed(Profile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats);
+        bool IsUpgradeAllowed(QualityProfile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats);
     }
 
     public class UpgradableSpecification : IUpgradableSpecification
@@ -28,7 +28,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             _logger = logger;
         }
 
-        public bool IsUpgradable(Profile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats)
+        public bool IsUpgradable(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats)
         {
             var qualityComparer = new QualityModelComparer(profile);
             var qualityCompare = qualityComparer.Compare(newQuality?.Quality, currentQuality.Quality);
@@ -36,13 +36,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
             if (qualityCompare > 0)
             {
-                _logger.Debug("New item has a better quality");
+                _logger.Debug("New item has a better quality. Existing: {0}. New: {1}", currentQuality, newQuality);
                 return true;
             }
 
             if (qualityCompare < 0)
             {
-                _logger.Debug("Existing item has better quality, skipping");
+                _logger.Debug("Existing item has better quality, skipping. Existing: {0}. New: {1}", currentQuality, newQuality);
                 return false;
             }
 
@@ -53,6 +53,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             if (downloadPropersAndRepacks != ProperDownloadTypes.DoNotPrefer &&
                 qualityRevisionCompare > 0)
             {
+                _logger.Debug("New item has a better quality revision, skipping. Existing: {0}. New: {1}", currentQuality, newQuality);
                 return true;
             }
 
@@ -63,23 +64,25 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             if (downloadPropersAndRepacks != ProperDownloadTypes.DoNotPrefer &&
                 qualityRevisionCompare < 0)
             {
-                _logger.Debug("Existing item has a better quality revision, skipping");
+                _logger.Debug("Existing item has a better quality revision, skipping. Existing: {0}. New: {1}", currentQuality, newQuality);
                 return false;
             }
 
             if (newFormatScore <= currentFormatScore)
             {
-                _logger.Debug("New item's custom formats [{0}] do not improve on [{1}], skipping",
+                _logger.Debug("New item's custom formats [{0}] ({1}) do not improve on [{2}] ({3}), skipping",
                               newCustomFormats.ConcatToString(),
-                              currentCustomFormats.ConcatToString());
+                              newFormatScore,
+                              currentCustomFormats.ConcatToString(),
+                              currentFormatScore);
                 return false;
             }
 
-            _logger.Debug("New item has a custom format upgrade");
+            _logger.Debug("New item has a better custom format score");
             return true;
         }
 
-        public bool QualityCutoffNotMet(Profile profile, QualityModel currentQuality, QualityModel newQuality = null)
+        public bool QualityCutoffNotMet(QualityProfile profile, QualityModel currentQuality, QualityModel newQuality = null)
         {
             var cutoff = profile.UpgradeAllowed ? profile.Cutoff : profile.FirststAllowedQuality().Id;
             var cutoffCompare = new QualityModelComparer(profile).Compare(currentQuality.Quality.Id, cutoff);
@@ -97,13 +100,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             return false;
         }
 
-        private bool CustomFormatCutoffNotMet(Profile profile, List<CustomFormat> currentFormats)
+        private bool CustomFormatCutoffNotMet(QualityProfile profile, List<CustomFormat> currentFormats)
         {
             var score = profile.CalculateCustomFormatScore(currentFormats);
             return score < profile.CutoffFormatScore;
         }
 
-        public bool CutoffNotMet(Profile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null)
+        public bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null)
         {
             if (QualityCutoffNotMet(profile, currentQuality, newQuality))
             {
@@ -115,7 +118,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return true;
             }
 
-            _logger.Debug("Existing item meets cut-off. skipping.");
+            _logger.Debug("Existing item meets cut-off. skipping. Existing: {0}", currentQuality);
 
             return false;
         }
@@ -124,16 +127,17 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         {
             var compare = newQuality.Revision.CompareTo(currentQuality.Revision);
 
+            // Comparing the quality directly because we don't want to upgrade to a proper for a webrip from a webdl or vice versa
             if (currentQuality.Quality == newQuality.Quality && compare > 0)
             {
-                _logger.Debug("New quality is a better revision for existing quality");
+                _logger.Debug("New quality is a better revision for existing quality. Existing: {0}. New: {1}", currentQuality, newQuality);
                 return true;
             }
 
             return false;
         }
 
-        public bool IsUpgradeAllowed(Profile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats)
+        public bool IsUpgradeAllowed(QualityProfile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats)
         {
             var isQualityUpgrade = new QualityModelComparer(qualityProfile).Compare(newQuality, currentQuality) > 0;
             var isCustomFormatUpgrade = qualityProfile.CalculateCustomFormatScore(newCustomFormats) > qualityProfile.CalculateCustomFormatScore(currentCustomFormats);

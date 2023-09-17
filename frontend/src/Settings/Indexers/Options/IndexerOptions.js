@@ -1,12 +1,13 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import Alert from 'Components/Alert';
 import FieldSet from 'Components/FieldSet';
 import Form from 'Components/Form/Form';
 import FormGroup from 'Components/Form/FormGroup';
 import FormInputGroup from 'Components/Form/FormInputGroup';
 import FormLabel from 'Components/Form/FormLabel';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
-import { inputTypes } from 'Helpers/Props';
+import { inputTypes, kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
 
 function IndexerOptions(props) {
@@ -16,7 +17,8 @@ function IndexerOptions(props) {
     error,
     settings,
     hasSettings,
-    onInputChange
+    onInputChange,
+    onWhitelistedSubtitleChange
   } = props;
 
   return (
@@ -28,9 +30,9 @@ function IndexerOptions(props) {
 
       {
         !isFetching && error &&
-          <div>
+          <Alert kind={kinds.DANGER}>
             {translate('UnableToLoadIndexerOptions')}
-          </div>
+          </Alert>
       }
 
       {
@@ -134,7 +136,7 @@ function IndexerOptions(props) {
                 type={inputTypes.TEXT_TAG}
                 name="whitelistedHardcodedSubs"
                 helpText={translate('WhitelistedHardcodedSubsHelpText')}
-                onChange={onInputChange}
+                onChange={onWhitelistedSubtitleChange}
                 {...settings.whitelistedHardcodedSubs}
               />
             </FormGroup>
@@ -165,7 +167,8 @@ IndexerOptions.propTypes = {
   error: PropTypes.object,
   settings: PropTypes.object.isRequired,
   hasSettings: PropTypes.bool.isRequired,
-  onInputChange: PropTypes.func.isRequired
+  onInputChange: PropTypes.func.isRequired,
+  onWhitelistedSubtitleChange: PropTypes.func.isRequired
 };
 
 export default IndexerOptions;

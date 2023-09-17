@@ -77,7 +77,9 @@ namespace NzbDrone.Common.EnvironmentInfo
                 FullName = Name;
             }
 
-            if (IsLinux && File.Exists("/proc/1/cgroup") && File.ReadAllText("/proc/1/cgroup").Contains("/docker/"))
+            if (IsLinux &&
+                (File.Exists("/.dockerenv") ||
+                 (File.Exists("/proc/1/cgroup") && File.ReadAllText("/proc/1/cgroup").Contains("/docker/"))))
             {
                 IsDocker = true;
             }

@@ -427,7 +427,7 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
                 {
                     var slug = lowerTitle.Split(':')[1].Trim();
 
-                    string imdbid = slug;
+                    var imdbid = slug;
 
                     if (slug.IsNullOrWhiteSpace() || slug.Any(char.IsWhiteSpace))
                     {
@@ -449,7 +449,7 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
                 {
                     var slug = lowerTitle.Split(':')[1].Trim();
 
-                    int tmdbid = -1;
+                    var tmdbid = -1;
 
                     if (slug.IsNullOrWhiteSpace() || slug.Any(char.IsWhiteSpace) || !int.TryParse(slug, out tmdbid))
                     {
@@ -571,8 +571,7 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
             {
                 Title = arg.Title,
                 SourceType = SourceType.TMDB,
-                CleanTitle = arg.Title.CleanMovieTitle(),
-                Language = IsoLanguages.Find(arg.Language.ToLower())?.Language ?? Language.English
+                CleanTitle = arg.Title.CleanMovieTitle()
             };
 
             return newAlternativeTitle;
@@ -647,7 +646,7 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
         {
             return new MediaCover.MediaCover
             {
-                Url = arg.Url,
+                RemoteUrl = arg.Url,
                 CoverType = MapCoverType(arg.CoverType)
             };
         }
@@ -662,6 +661,8 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
                     return MediaCoverTypes.Headshot;
                 case "fanart":
                     return MediaCoverTypes.Fanart;
+                case "clearlogo":
+                    return MediaCoverTypes.Clearlogo;
                 default:
                     return MediaCoverTypes.Unknown;
             }

@@ -87,6 +87,10 @@ module.exports = {
   inputWarningBoxShadowColor: 'rgba(255, 165, 0, 0.6)',
   colorImpairedGradient: '#ffffff',
   colorImpairedGradientDark: '#f4f5f6',
+  colorImpairedDangerGradient: '#d84848',
+  colorImpairedWarningGradient: '#e59400',
+  colorImpairedPrimaryGradient: '#538cd4',
+  colorImpairedGrayGradient: '#9b9b9b',
 
   //
   // Buttons
@@ -198,8 +202,8 @@ module.exports = {
   popoverShadowColor: 'rgba(0, 0, 0, 0.2)',
   popoverArrowBorderColor: '#fff',
 
-  popoverTitleBackgroundInverseColor: '#595959',
-  popoverTitleBorderInverseColor: '#707070',
+  popoverTitleBackgroundInverseColor: '#9b9b9b',
+  popoverTitleBorderInverseColor: '#bfbfbf',
   popoverShadowInverseColor: 'rgba(0, 0, 0, 0.2)',
   popoverArrowBorderInverseColor: 'rgba(58, 63, 81, 0.75)',
 
@@ -207,10 +211,10 @@ module.exports = {
   // Calendar
 
   calendarTodayBackgroundColor: '#c5c5c5',
-  calendarBackgroudColor: '#e4eaec',
+  calendarBackgroundColor: '#e4eaec',
   calendarBorderColor: '#cecece',
   calendarTextDim: '#666',
-  calendarTextDimAlternate: '#000',
+  calendarTextDimAlternate: '#242424',
 
   //
   // Table

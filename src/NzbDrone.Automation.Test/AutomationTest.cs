@@ -46,7 +46,7 @@ namespace NzbDrone.Automation.Test
 
             _runner = new NzbDroneRunner(LogManager.GetCurrentClassLogger(), null);
             _runner.KillAll();
-            _runner.Start();
+            _runner.Start(true);
 
             driver.Url = "http://localhost:7878";
 
@@ -68,7 +68,7 @@ namespace NzbDrone.Automation.Test
         {
             try
             {
-                Screenshot image = ((ITakesScreenshot)driver).GetScreenshot();
+                var image = ((ITakesScreenshot)driver).GetScreenshot();
                 image.SaveAsFile($"./{name}_test_screenshot.png", ScreenshotImageFormat.Png);
             }
             catch (Exception ex)

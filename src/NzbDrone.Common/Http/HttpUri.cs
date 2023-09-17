@@ -22,7 +22,7 @@ namespace NzbDrone.Common.Http
 
         public HttpUri(string scheme, string host, int? port, string path, string query, string fragment)
         {
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
 
             if (scheme.IsNotNullOrWhiteSpace())
             {
@@ -170,7 +170,7 @@ namespace NzbDrone.Common.Http
 
             if (baseSlashIndex >= 0)
             {
-                return basePath.Substring(0, baseSlashIndex) + "/" + relativePath;
+                return $"{basePath.AsSpan(0, baseSlashIndex)}/{relativePath}";
             }
 
             return relativePath;

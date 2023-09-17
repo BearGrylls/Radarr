@@ -4,7 +4,8 @@ import IconButton from 'Components/Link/IconButton';
 import RelativeDateCellConnector from 'Components/Table/Cells/RelativeDateCellConnector';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableRow from 'Components/Table/TableRow';
-import { icons } from 'Helpers/Props';
+import Tooltip from 'Components/Tooltip/Tooltip';
+import { icons, tooltipPositions } from 'Helpers/Props';
 import MovieFormats from 'Movie/MovieFormats';
 import MovieLanguage from 'Movie/MovieLanguage';
 import MovieQuality from 'Movie/MovieQuality';
@@ -56,12 +57,14 @@ class HistoryRow extends Component {
       movie,
       quality,
       customFormats,
+      customFormatScore,
       languages,
       qualityCutoffNotMet,
       eventType,
       sourceTitle,
       date,
       data,
+      downloadId,
       isMarkingAsFailed,
       columns,
       shortDateFormat,
@@ -175,7 +178,14 @@ class HistoryRow extends Component {
                   key={name}
                   className={styles.customFormatScore}
                 >
-                  {formatCustomFormatScore(data.customFormatScore)}
+                  <Tooltip
+                    anchor={formatCustomFormatScore(
+                      customFormatScore,
+                      customFormats.length
+                    )}
+                    tooltip={<MovieFormats formats={customFormats} />}
+                    position={tooltipPositions.BOTTOM}
+                  />
                 </TableRowCell>
               );
             }
@@ -224,6 +234,7 @@ class HistoryRow extends Component {
           eventType={eventType}
           sourceTitle={sourceTitle}
           data={data}
+          downloadId={downloadId}
           isMarkingAsFailed={isMarkingAsFailed}
           shortDateFormat={shortDateFormat}
           timeFormat={timeFormat}
@@ -241,18 +252,24 @@ HistoryRow.propTypes = {
   movie: PropTypes.object.isRequired,
   languages: PropTypes.arrayOf(PropTypes.object).isRequired,
   quality: PropTypes.object.isRequired,
+  customFormats: PropTypes.arrayOf(PropTypes.object),
+  customFormatScore: PropTypes.number.isRequired,
   qualityCutoffNotMet: PropTypes.bool.isRequired,
-  customFormats: PropTypes.arrayOf(PropTypes.object).isRequired,
   eventType: PropTypes.string.isRequired,
   sourceTitle: PropTypes.string.isRequired,
   date: PropTypes.string.isRequired,
   data: PropTypes.object.isRequired,
+  downloadId: PropTypes.string,
   isMarkingAsFailed: PropTypes.bool,
   markAsFailedError: PropTypes.object,
   columns: PropTypes.arrayOf(PropTypes.object).isRequired,
   shortDateFormat: PropTypes.string.isRequired,
   timeFormat: PropTypes.string.isRequired,
   onMarkAsFailedPress: PropTypes.func.isRequired
+};
+
+HistoryRow.defaultProps = {
+  customFormats: []
 };
 
 export default HistoryRow;

@@ -26,6 +26,7 @@ namespace NzbDrone.Core.Configuration
         XDocument LoadConfigFile();
         Dictionary<string, object> GetConfigDictionary();
         void SaveConfigDictionary(Dictionary<string, object> configValues);
+        void EnsureDefaultConfigFile();
 
         string BindAddress { get; }
         int Port { get; }
@@ -33,6 +34,7 @@ namespace NzbDrone.Core.Configuration
         bool EnableSsl { get; }
         bool LaunchBrowser { get; }
         AuthenticationType AuthenticationMethod { get; }
+        AuthenticationRequiredType AuthenticationRequired { get; }
         bool AnalyticsEnabled { get; }
         string LogLevel { get; }
         string ConsoleLogLevel { get; }
@@ -118,8 +120,7 @@ namespace NzbDrone.Core.Configuration
                     continue;
                 }
 
-                object currentValue;
-                allWithDefaults.TryGetValue(configValue.Key, out currentValue);
+                allWithDefaults.TryGetValue(configValue.Key, out var currentValue);
                 if (currentValue == null)
                 {
                     continue;
@@ -142,7 +143,7 @@ namespace NzbDrone.Core.Configuration
             {
                 const string defaultValue = "*";
 
-                string bindAddress = GetValue("BindAddress", defaultValue);
+                var bindAddress = GetValue("BindAddress", defaultValue);
                 if (string.IsNullOrWhiteSpace(bindAddress))
                 {
                     return defaultValue;
@@ -192,6 +193,8 @@ namespace NzbDrone.Core.Configuration
             }
         }
 
+        public AuthenticationRequiredType AuthenticationRequired => GetValueEnum("AuthenticationRequired", AuthenticationRequiredType.Enabled);
+
         public bool AnalyticsEnabled => GetValueBoolean("AnalyticsEnabled", true, persist: false);
 
         public string Branch => GetValue("Branch", "master").ToLowerInvariant();
@@ -222,7 +225,7 @@ namespace NzbDrone.Core.Configuration
                     return urlBase;
                 }
 
-                return "/" + urlBase.Trim('/').ToLower();
+                return "/" + urlBase;
             }
         }
 
@@ -253,7 +256,7 @@ namespace NzbDrone.Core.Configuration
 
         public T GetValueEnum<T>(string key, T defaultValue, bool persist = true)
         {
-            return (T)Enum.Parse(typeof(T), GetValue(key, defaultValue), persist);
+            return (T)Enum.Parse(typeof(T), GetValue(key, defaultValue, persist), true);
         }
 
         public string GetValue(string key, object defaultValue, bool persist = true)
@@ -312,7 +315,7 @@ namespace NzbDrone.Core.Configuration
             SetValue(key, value.ToString().ToLower());
         }
 
-        private void EnsureDefaultConfigFile()
+        public void EnsureDefaultConfigFile()
         {
             if (!File.Exists(_configFile))
             {

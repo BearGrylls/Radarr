@@ -50,8 +50,9 @@ namespace NzbDrone.Core.IndexerSearch
                     continue;
                 }
 
-                var decisions = _releaseSearchService.MovieSearch(movieId, userInvokedSearch, false);
-                downloadedCount += _processDownloadDecisions.ProcessDecisions(decisions).Grabbed.Count;
+                var decisions = _releaseSearchService.MovieSearch(movieId, userInvokedSearch, false).GetAwaiter().GetResult();
+                var processDecisions = _processDownloadDecisions.ProcessDecisions(decisions).GetAwaiter().GetResult();
+                downloadedCount += processDecisions.Grabbed.Count;
             }
 
             _logger.ProgressInfo("Movie search completed. {0} reports downloaded.", downloadedCount);
@@ -68,7 +69,7 @@ namespace NzbDrone.Core.IndexerSearch
             };
 
             pagingSpec.FilterExpressions.Add(v => v.Monitored == true);
-            List<Movie> movies = _movieService.MoviesWithoutFiles(pagingSpec).Records.ToList();
+            var movies = _movieService.MoviesWithoutFiles(pagingSpec).Records.ToList();
 
             var queue = _queueService.GetQueue().Where(q => q.Movie != null).Select(q => q.Movie.Id);
             var missing = movies.Where(e => !queue.Contains(e.Id)).ToList();
@@ -88,7 +89,7 @@ namespace NzbDrone.Core.IndexerSearch
 
             pagingSpec.FilterExpressions.Add(v => v.Monitored == true);
 
-            List<Movie> movies = _movieCutoffService.MoviesWhereCutoffUnmet(pagingSpec).Records.ToList();
+            var movies = _movieCutoffService.MoviesWhereCutoffUnmet(pagingSpec).Records.ToList();
 
             var queue = _queueService.GetQueue().Where(q => q.Movie != null).Select(q => q.Movie.Id);
             var missing = movies.Where(e => !queue.Contains(e.Id)).ToList();
@@ -107,7 +108,7 @@ namespace NzbDrone.Core.IndexerSearch
 
                 try
                 {
-                    decisions = _releaseSearchService.MovieSearch(movieId.Key, userInvokedSearch, false);
+                    decisions = _releaseSearchService.MovieSearch(movieId.Key, userInvokedSearch, false).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
@@ -116,9 +117,8 @@ namespace NzbDrone.Core.IndexerSearch
                     continue;
                 }
 
-                var processed = _processDownloadDecisions.ProcessDecisions(decisions);
-
-                downloadedCount += processed.Grabbed.Count;
+                var processDecisions = _processDownloadDecisions.ProcessDecisions(decisions).GetAwaiter().GetResult();
+                downloadedCount += processDecisions.Grabbed.Count;
             }
 
             _logger.ProgressInfo("Completed missing search for {0} movies. {1} reports downloaded.", movies.Count, downloadedCount);

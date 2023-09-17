@@ -29,7 +29,7 @@ namespace NzbDrone.Core.Notifications.Boxcar
 
         public override void OnMovieAdded(Movie movie)
         {
-            _proxy.SendNotification(MOVIE_ADDED_TITLE_BRANDED, $"{movie.Title} added to library", Settings);
+            _proxy.SendNotification(MOVIE_ADDED_TITLE, $"{movie.Title} added to library", Settings);
         }
 
         public override void OnMovieFileDelete(MovieFileDeleteMessage deleteMessage)
@@ -47,9 +47,19 @@ namespace NzbDrone.Core.Notifications.Boxcar
             _proxy.SendNotification(HEALTH_ISSUE_TITLE, message.Message, Settings);
         }
 
+        public override void OnHealthRestored(HealthCheck.HealthCheck previousCheck)
+        {
+            _proxy.SendNotification(HEALTH_RESTORED_TITLE, $"The following issue is now resolved: {previousCheck.Message}", Settings);
+        }
+
         public override void OnApplicationUpdate(ApplicationUpdateMessage message)
         {
             _proxy.SendNotification(APPLICATION_UPDATE_TITLE, message.Message, Settings);
+        }
+
+        public override void OnManualInteractionRequired(ManualInteractionRequiredMessage message)
+        {
+            _proxy.SendNotification(MANUAL_INTERACTION_REQUIRED_TITLE, message.Message, Settings);
         }
 
         public override ValidationResult Test()

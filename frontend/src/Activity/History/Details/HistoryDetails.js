@@ -7,6 +7,7 @@ import DescriptionListItemTitle from 'Components/DescriptionList/DescriptionList
 import Link from 'Components/Link/Link';
 import formatDateTime from 'Utilities/Date/formatDateTime';
 import formatAge from 'Utilities/Number/formatAge';
+import formatCustomFormatScore from 'Utilities/Number/formatCustomFormatScore';
 import translate from 'Utilities/String/translate';
 import styles from './HistoryDetails.css';
 
@@ -15,6 +16,7 @@ function HistoryDetails(props) {
     eventType,
     sourceTitle,
     data,
+    downloadId,
     shortDateFormat,
     timeFormat
   } = props;
@@ -23,10 +25,11 @@ function HistoryDetails(props) {
     const {
       indexer,
       releaseGroup,
+      movieMatchType,
+      customFormatScore,
       nzbInfoUrl,
       downloadClient,
       downloadClientName,
-      downloadId,
       age,
       ageHours,
       ageMinutes,
@@ -44,33 +47,55 @@ function HistoryDetails(props) {
         />
 
         {
-          !!indexer &&
+          indexer ?
             <DescriptionListItem
               title={translate('Indexer')}
               data={indexer}
-            />
+            /> :
+            null
         }
 
         {
-          !!releaseGroup &&
+          releaseGroup ?
             <DescriptionListItem
               descriptionClassName={styles.description}
               title={translate('ReleaseGroup')}
               data={releaseGroup}
-            />
+            /> :
+            null
         }
 
         {
-          !!nzbInfoUrl &&
+          customFormatScore && customFormatScore !== '0' ?
+            <DescriptionListItem
+              title={translate('CustomFormatScore')}
+              data={formatCustomFormatScore(customFormatScore)}
+            /> :
+            null
+        }
+
+        {
+          movieMatchType ?
+            <DescriptionListItem
+              descriptionClassName={styles.description}
+              title={translate('MovieMatchType')}
+              data={movieMatchType}
+            /> :
+            null
+        }
+
+        {
+          nzbInfoUrl ?
             <span>
               <DescriptionListItemTitle>
-                Info URL
+                {translate('InfoUrl')}
               </DescriptionListItemTitle>
 
               <DescriptionListItemDescription>
                 <Link to={nzbInfoUrl}>{nzbInfoUrl}</Link>
               </DescriptionListItemDescription>
-            </span>
+            </span> :
+            null
         }
 
         {
@@ -83,27 +108,30 @@ function HistoryDetails(props) {
         }
 
         {
-          !!downloadId &&
+          downloadId ?
             <DescriptionListItem
-              title={translate('GrabID')}
+              title={translate('GrabId')}
               data={downloadId}
-            />
+            /> :
+            null
         }
 
         {
-          !!indexer &&
+          indexer ?
             <DescriptionListItem
               title={translate('AgeWhenGrabbed')}
               data={formatAge(age, ageHours, ageMinutes)}
-            />
+            /> :
+            null
         }
 
         {
-          !!publishedDate &&
+          publishedDate ?
             <DescriptionListItem
               title={translate('PublishedDate')}
               data={formatDateTime(publishedDate, shortDateFormat, timeFormat, { includeSeconds: true })}
-            />
+            /> :
+            null
         }
       </DescriptionList>
     );
@@ -123,11 +151,21 @@ function HistoryDetails(props) {
         />
 
         {
-          !!message &&
+          downloadId ?
+            <DescriptionListItem
+              title={translate('GrabId')}
+              data={downloadId}
+            /> :
+            null
+        }
+
+        {
+          message ?
             <DescriptionListItem
               title={translate('Message')}
               data={message}
-            />
+            /> :
+            null
         }
       </DescriptionList>
     );
@@ -135,6 +173,7 @@ function HistoryDetails(props) {
 
   if (eventType === 'downloadFolderImported') {
     const {
+      customFormatScore,
       droppedPath,
       importedPath
     } = data;
@@ -148,21 +187,32 @@ function HistoryDetails(props) {
         />
 
         {
-          !!droppedPath &&
+          droppedPath ?
             <DescriptionListItem
               descriptionClassName={styles.description}
               title={translate('Source')}
               data={droppedPath}
-            />
+            /> :
+            null
         }
 
         {
-          !!importedPath &&
+          importedPath ?
             <DescriptionListItem
               descriptionClassName={styles.description}
               title={translate('ImportedTo')}
               data={importedPath}
-            />
+            /> :
+            null
+        }
+
+        {
+          customFormatScore && customFormatScore !== '0' ?
+            <DescriptionListItem
+              title={translate('CustomFormatScore')}
+              data={formatCustomFormatScore(customFormatScore)}
+            /> :
+            null
         }
       </DescriptionList>
     );
@@ -170,20 +220,21 @@ function HistoryDetails(props) {
 
   if (eventType === 'movieFileDeleted') {
     const {
-      reason
+      reason,
+      customFormatScore
     } = data;
 
     let reasonMessage = '';
 
     switch (reason) {
       case 'Manual':
-        reasonMessage = translate('FileWasDeletedByViaUI');
+        reasonMessage = translate('DeletedReasonManual');
         break;
       case 'MissingFromDisk':
-        reasonMessage = translate('MissingFromDisk');
+        reasonMessage = translate('DeletedReasonMissingFromDisk');
         break;
       case 'Upgrade':
-        reasonMessage = translate('FileWasDeletedByUpgrade');
+        reasonMessage = translate('DeletedReasonUpgrade');
         break;
       default:
         reasonMessage = '';
@@ -200,6 +251,15 @@ function HistoryDetails(props) {
           title={translate('Reason')}
           data={reasonMessage}
         />
+
+        {
+          customFormatScore && customFormatScore !== '0' ?
+            <DescriptionListItem
+              title={translate('CustomFormatScore')}
+              data={formatCustomFormatScore(customFormatScore)}
+            /> :
+            null
+        }
       </DescriptionList>
     );
   }
@@ -251,11 +311,21 @@ function HistoryDetails(props) {
         />
 
         {
-          !!message &&
+          downloadId ?
+            <DescriptionListItem
+              title={translate('GrabId')}
+              data={downloadId}
+            /> :
+            null
+        }
+
+        {
+          message ?
             <DescriptionListItem
               title={translate('Message')}
               data={message}
-            />
+            /> :
+            null
         }
       </DescriptionList>
     );
@@ -276,6 +346,7 @@ HistoryDetails.propTypes = {
   eventType: PropTypes.string.isRequired,
   sourceTitle: PropTypes.string.isRequired,
   data: PropTypes.object.isRequired,
+  downloadId: PropTypes.string,
   shortDateFormat: PropTypes.string.isRequired,
   timeFormat: PropTypes.string.isRequired
 };

@@ -102,6 +102,7 @@ export default {
 
     [SELECT_NOTIFICATION_SCHEMA]: (state, { payload }) => {
       return selectProviderSchema(state, section, payload, (selectedSchema) => {
+        selectedSchema.name = selectedSchema.implementationName;
         selectedSchema.onGrab = selectedSchema.supportsOnGrab;
         selectedSchema.onDownload = selectedSchema.supportsOnDownload;
         selectedSchema.onUpgrade = selectedSchema.supportsOnUpgrade;
@@ -111,6 +112,7 @@ export default {
         selectedSchema.onMovieFileDelete = selectedSchema.supportsOnMovieFileDelete;
         selectedSchema.onMovieFileDeleteForUpgrade = selectedSchema.supportsOnMovieFileDeleteForUpgrade;
         selectedSchema.onApplicationUpdate = selectedSchema.supportsOnApplicationUpdate;
+        selectedSchema.onManualInteractionRequired = selectedSchema.supportsOnManualInteractionRequired;
 
         return selectedSchema;
       });

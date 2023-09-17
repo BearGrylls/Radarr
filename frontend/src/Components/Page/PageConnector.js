@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { withRouter } from 'react-router-dom';
 import { createSelector } from 'reselect';
-import { saveDimensions, setIsSidebarVisible } from 'Store/Actions/appActions';
+import { fetchTranslations, saveDimensions, setIsSidebarVisible } from 'Store/Actions/appActions';
 import { fetchCustomFilters } from 'Store/Actions/customFilterActions';
 import { fetchMovies } from 'Store/Actions/movieActions';
 import { fetchMovieCollections } from 'Store/Actions/movieCollectionActions';
@@ -11,6 +11,7 @@ import { fetchImportLists, fetchIndexerFlags, fetchLanguages, fetchQualityProfil
 import { fetchStatus } from 'Store/Actions/systemActions';
 import { fetchTags } from 'Store/Actions/tagActions';
 import createDimensionsSelector from 'Store/Selectors/createDimensionsSelector';
+import createSystemStatusSelector from 'Store/Selectors/createSystemStatusSelector';
 import ErrorPage from './ErrorPage';
 import LoadingPage from './LoadingPage';
 import Page from './Page';
@@ -53,6 +54,7 @@ const selectIsPopulated = createSelector(
   (state) => state.settings.importLists.isPopulated,
   (state) => state.system.status.isPopulated,
   (state) => state.movieCollections.isPopulated,
+  (state) => state.app.translations.isPopulated,
   (
     customFiltersIsPopulated,
     tagsIsPopulated,
@@ -62,7 +64,8 @@ const selectIsPopulated = createSelector(
     indexerFlagsIsPopulated,
     importListsIsPopulated,
     systemStatusIsPopulated,
-    movieCollectionsIsPopulated
+    movieCollectionsIsPopulated,
+    translationsIsPopulated
   ) => {
     return (
       customFiltersIsPopulated &&
@@ -73,7 +76,8 @@ const selectIsPopulated = createSelector(
       indexerFlagsIsPopulated &&
       importListsIsPopulated &&
       systemStatusIsPopulated &&
-      movieCollectionsIsPopulated
+      movieCollectionsIsPopulated &&
+      translationsIsPopulated
     );
   }
 );
@@ -88,6 +92,7 @@ const selectErrors = createSelector(
   (state) => state.settings.importLists.error,
   (state) => state.system.status.error,
   (state) => state.movieCollections.error,
+  (state) => state.app.translations.error,
   (
     customFiltersError,
     tagsError,
@@ -97,7 +102,8 @@ const selectErrors = createSelector(
     indexerFlagsError,
     importListsError,
     systemStatusError,
-    movieCollectionsError
+    movieCollectionsError,
+    translationsError
   ) => {
     const hasError = !!(
       customFiltersError ||
@@ -108,7 +114,8 @@ const selectErrors = createSelector(
       indexerFlagsError ||
       importListsError ||
       systemStatusError ||
-      movieCollectionsError
+      movieCollectionsError ||
+      translationsError
     );
 
     return {
@@ -121,7 +128,8 @@ const selectErrors = createSelector(
       indexerFlagsError,
       importListsError,
       systemStatusError,
-      movieCollectionsError
+      movieCollectionsError,
+      translationsError
     };
   }
 );
@@ -133,18 +141,21 @@ function createMapStateToProps() {
     selectErrors,
     selectAppProps,
     createDimensionsSelector(),
+    createSystemStatusSelector(),
     (
       enableColorImpairedMode,
       isPopulated,
       errors,
       app,
-      dimensions
+      dimensions,
+      systemStatus
     ) => {
       return {
         ...app,
         ...errors,
         isPopulated,
         isSmallScreen: dimensions.isSmallScreen,
+        authenticationEnabled: systemStatus.authentication !== 'none',
         enableColorImpairedMode
       };
     }
@@ -183,6 +194,9 @@ function createMapDispatchToProps(dispatch, props) {
     dispatchFetchStatus() {
       dispatch(fetchStatus());
     },
+    dispatchFetchTranslations() {
+      dispatch(fetchTranslations());
+    },
     onResize(dimensions) {
       dispatch(saveDimensions(dimensions));
     },
@@ -217,6 +231,7 @@ class PageConnector extends Component {
       this.props.dispatchFetchImportLists();
       this.props.dispatchFetchUISettings();
       this.props.dispatchFetchStatus();
+      this.props.dispatchFetchTranslations();
     }
   }
 
@@ -243,6 +258,7 @@ class PageConnector extends Component {
       dispatchFetchImportLists,
       dispatchFetchUISettings,
       dispatchFetchStatus,
+      dispatchFetchTranslations,
       ...otherProps
     } = this.props;
 
@@ -284,6 +300,7 @@ PageConnector.propTypes = {
   dispatchFetchImportLists: PropTypes.func.isRequired,
   dispatchFetchUISettings: PropTypes.func.isRequired,
   dispatchFetchStatus: PropTypes.func.isRequired,
+  dispatchFetchTranslations: PropTypes.func.isRequired,
   onSidebarVisibleChange: PropTypes.func.isRequired
 };
 

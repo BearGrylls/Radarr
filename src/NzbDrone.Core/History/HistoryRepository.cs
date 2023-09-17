@@ -4,7 +4,7 @@ using System.Linq;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
-using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.History
@@ -37,9 +37,7 @@ namespace NzbDrone.Core.History
 
         public MovieHistory MostRecentForDownloadId(string downloadId)
         {
-            return FindByDownloadId(downloadId)
-                .OrderByDescending(h => h.Date)
-                .FirstOrDefault();
+            return FindByDownloadId(downloadId).MaxBy(h => h.Date);
         }
 
         public List<MovieHistory> FindByDownloadId(string downloadId)
@@ -60,7 +58,7 @@ namespace NzbDrone.Core.History
         {
             var builder = new SqlBuilder(_database.DatabaseType)
                 .Join<MovieHistory, Movie>((h, m) => h.MovieId == m.Id)
-                .Join<Movie, Profile>((m, p) => m.ProfileId == p.Id)
+                .Join<Movie, QualityProfile>((m, p) => m.QualityProfileId == p.Id)
                 .Where<MovieHistory>(h => h.MovieId == movieId);
 
             if (eventType.HasValue)
@@ -78,28 +76,27 @@ namespace NzbDrone.Core.History
 
         protected override SqlBuilder PagedBuilder() => new SqlBuilder(_database.DatabaseType)
             .Join<MovieHistory, Movie>((h, m) => h.MovieId == m.Id)
-            .Join<Movie, Profile>((m, p) => m.ProfileId == p.Id);
+            .Join<Movie, QualityProfile>((m, p) => m.QualityProfileId == p.Id)
+            .LeftJoin<Movie, MovieMetadata>((m, mm) => m.MovieMetadataId == mm.Id);
 
         protected override IEnumerable<MovieHistory> PagedQuery(SqlBuilder sql) =>
-            _database.QueryJoined<MovieHistory, Movie, Profile>(sql, (hist, movie, profile) =>
+            _database.QueryJoined<MovieHistory, Movie, QualityProfile>(sql, (hist, movie, profile) =>
                     {
                         hist.Movie = movie;
-                        hist.Movie.Profile = profile;
+                        hist.Movie.QualityProfile = profile;
                         return hist;
                     });
 
         public MovieHistory MostRecentForMovie(int movieId)
         {
-            return Query(x => x.MovieId == movieId)
-                .OrderByDescending(h => h.Date)
-                .FirstOrDefault();
+            return Query(x => x.MovieId == movieId).MaxBy(h => h.Date);
         }
 
         public List<MovieHistory> Since(DateTime date, MovieHistoryEventType? eventType)
         {
             var builder = new SqlBuilder(_database.DatabaseType)
                 .Join<MovieHistory, Movie>((h, m) => h.MovieId == m.Id)
-                .Join<Movie, Profile>((m, p) => m.ProfileId == p.Id)
+                .Join<Movie, QualityProfile>((m, p) => m.QualityProfileId == p.Id)
                 .Where<MovieHistory>(x => x.Date >= date);
 
             if (eventType.HasValue)

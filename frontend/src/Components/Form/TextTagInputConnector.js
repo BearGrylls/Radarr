@@ -46,13 +46,13 @@ class TextTagInputConnector extends Component {
     // to oddities with restrictions (as an example).
 
     const newValue = [...valueArray];
-    const newTags = split(tag.name);
+    const newTags = tag.name.startsWith('/') ? [tag.name] : split(tag.name);
 
     newTags.forEach((newTag) => {
       newValue.push(newTag.trim());
     });
 
-    onChange({ name, value: newValue.join(',') });
+    onChange({ name, value: newValue });
   };
 
   onTagDelete = ({ index }) => {
@@ -67,8 +67,22 @@ class TextTagInputConnector extends Component {
 
     onChange({
       name,
-      value: newValue.join(',')
+      value: newValue
     });
+  };
+
+  onTagReplace = (tagToReplace, newTag) => {
+    const {
+      name,
+      valueArray,
+      onChange
+    } = this.props;
+
+    const newValue = [...valueArray];
+    newValue.splice(tagToReplace.index, 1);
+    newValue.push(newTag.name.trim());
+
+    onChange({ name, value: newValue });
   };
 
   //
@@ -80,6 +94,7 @@ class TextTagInputConnector extends Component {
         tagList={[]}
         onTagAdd={this.onTagAdd}
         onTagDelete={this.onTagDelete}
+        onTagReplace={this.onTagReplace}
         {...this.props}
       />
     );

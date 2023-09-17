@@ -1,5 +1,6 @@
 using System.Linq;
 using NzbDrone.Common.Disk;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Localization;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Movies;
@@ -29,11 +30,11 @@ namespace NzbDrone.Core.HealthCheck.Checks
         public override HealthCheck Check()
         {
             var rootFolders = _movieService.AllMoviePaths()
-                                                           .Select(s => _rootFolderService.GetBestRootFolderPath(s.Value))
-                                                           .Distinct();
+                .Select(s => _rootFolderService.GetBestRootFolderPath(s.Value))
+                .Distinct();
 
-            var missingRootFolders = rootFolders.Where(s => !_diskProvider.FolderExists(s))
-                                                          .ToList();
+            var missingRootFolders = rootFolders.Where(s => !s.IsPathValid(PathValidationType.CurrentOs) || !_diskProvider.FolderExists(s))
+                .ToList();
 
             if (missingRootFolders.Any())
             {

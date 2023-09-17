@@ -21,24 +21,24 @@ const SIDEBAR_WIDTH = parseInt(dimensions.sidebarWidth);
 const links = [
   {
     iconName: icons.MOVIE_CONTINUING,
-    title: translate('Movies'),
+    title: () => translate('Movies'),
     to: '/',
     alias: '/movies',
     children: [
       {
-        title: translate('AddNew'),
+        title: () => translate('AddNew'),
         to: '/add/new'
       },
       {
-        title: translate('ImportLibrary'),
+        title: () => translate('ImportLibrary'),
         to: '/add/import'
       },
       {
-        title: translate('Collections'),
+        title: () => translate('Collections'),
         to: '/collections'
       },
       {
-        title: translate('Discover'),
+        title: () => translate('Discover'),
         to: '/add/discover'
       }
     ]
@@ -46,26 +46,26 @@ const links = [
 
   {
     iconName: icons.CALENDAR,
-    title: translate('Calendar'),
+    title: () => translate('Calendar'),
     to: '/calendar'
   },
 
   {
     iconName: icons.ACTIVITY,
-    title: translate('Activity'),
+    title: () => translate('Activity'),
     to: '/activity/queue',
     children: [
       {
-        title: translate('Queue'),
+        title: () => translate('Queue'),
         to: '/activity/queue',
         statusComponent: QueueStatusConnector
       },
       {
-        title: translate('History'),
+        title: () => translate('History'),
         to: '/activity/history'
       },
       {
-        title: translate('Blocklist'),
+        title: () => translate('Blocklist'),
         to: '/activity/blocklist'
       }
     ]
@@ -73,55 +73,55 @@ const links = [
 
   {
     iconName: icons.SETTINGS,
-    title: translate('Settings'),
+    title: () => translate('Settings'),
     to: '/settings',
     children: [
       {
-        title: translate('MediaManagement'),
+        title: () => translate('MediaManagement'),
         to: '/settings/mediamanagement'
       },
       {
-        title: translate('Profiles'),
+        title: () => translate('Profiles'),
         to: '/settings/profiles'
       },
       {
-        title: translate('Quality'),
+        title: () => translate('Quality'),
         to: '/settings/quality'
       },
       {
-        title: translate('CustomFormats'),
+        title: () => translate('CustomFormats'),
         to: '/settings/customformats'
       },
       {
-        title: translate('Indexers'),
+        title: () => translate('Indexers'),
         to: '/settings/indexers'
       },
       {
-        title: translate('DownloadClients'),
+        title: () => translate('DownloadClients'),
         to: '/settings/downloadclients'
       },
       {
-        title: translate('Lists'),
+        title: () => translate('Lists'),
         to: '/settings/importlists'
       },
       {
-        title: translate('Connect'),
+        title: () => translate('Connect'),
         to: '/settings/connect'
       },
       {
-        title: translate('Metadata'),
+        title: () => translate('Metadata'),
         to: '/settings/metadata'
       },
       {
-        title: translate('Tags'),
+        title: () => translate('Tags'),
         to: '/settings/tags'
       },
       {
-        title: translate('General'),
+        title: () => translate('General'),
         to: '/settings/general'
       },
       {
-        title: translate('UI'),
+        title: () => translate('UI'),
         to: '/settings/ui'
       }
     ]
@@ -129,32 +129,32 @@ const links = [
 
   {
     iconName: icons.SYSTEM,
-    title: translate('System'),
+    title: () => translate('System'),
     to: '/system/status',
     children: [
       {
-        title: translate('Status'),
+        title: () => translate('Status'),
         to: '/system/status',
         statusComponent: HealthStatusConnector
       },
       {
-        title: translate('Tasks'),
+        title: () => translate('Tasks'),
         to: '/system/tasks'
       },
       {
-        title: translate('Backup'),
+        title: () => translate('Backup'),
         to: '/system/backup'
       },
       {
-        title: translate('Updates'),
+        title: () => translate('Updates'),
         to: '/system/updates'
       },
       {
-        title: translate('Events'),
+        title: () => translate('Events'),
         to: '/system/events'
       },
       {
-        title: translate('LogFiles'),
+        title: () => translate('LogFiles'),
         to: '/system/logs/files'
       }
     ]

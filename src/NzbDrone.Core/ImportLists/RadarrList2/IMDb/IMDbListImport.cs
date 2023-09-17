@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NLog;
 using NzbDrone.Common.Cloud;
@@ -15,6 +16,7 @@ namespace NzbDrone.Core.ImportLists.RadarrList2.IMDbList
         public override string Name => "IMDb Lists";
 
         public override ImportListType ListType => ImportListType.Other;
+        public override TimeSpan MinRefreshInterval => TimeSpan.FromHours(12);
         public override bool Enabled => true;
         public override bool EnableAuto => false;
 
@@ -43,7 +45,7 @@ namespace NzbDrone.Core.ImportLists.RadarrList2.IMDbList
                     Name = "IMDb Top 250",
                     Enabled = Enabled,
                     EnableAuto = true,
-                    ProfileId = 1,
+                    QualityProfileId = 1,
                     Implementation = GetType().Name,
                     Settings = new IMDbListSettings { ListId = "top250" },
                 };
@@ -52,7 +54,7 @@ namespace NzbDrone.Core.ImportLists.RadarrList2.IMDbList
                     Name = "IMDb Popular Movies",
                     Enabled = Enabled,
                     EnableAuto = true,
-                    ProfileId = 1,
+                    QualityProfileId = 1,
                     Implementation = GetType().Name,
                     Settings = new IMDbListSettings { ListId = "popular" },
                 };

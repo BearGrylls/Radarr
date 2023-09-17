@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using FluentValidation.Results;
 using NzbDrone.Common.Extensions;
@@ -36,7 +35,7 @@ namespace NzbDrone.Core.Notifications.Discord
                 },
                 Url = $"https://www.themoviedb.org/movie/{message.Movie.MovieMetadata.Value.TmdbId}",
                 Description = "Movie Grabbed",
-                Title = message.Movie.MovieMetadata.Value.Year > 0 ? $"{message.Movie.MovieMetadata.Value.Title} ({message.Movie.MovieMetadata.Value.Year})" : message.Movie.MovieMetadata.Value.Title,
+                Title = GetTitle(message.Movie),
                 Color = (int)DiscordColors.Standard,
                 Fields = new List<DiscordField>(),
                 Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
@@ -46,7 +45,7 @@ namespace NzbDrone.Core.Notifications.Discord
             {
                 embed.Thumbnail = new DiscordImage
                 {
-                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.Url
+                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.RemoteUrl
                 };
             }
 
@@ -54,7 +53,7 @@ namespace NzbDrone.Core.Notifications.Discord
             {
                 embed.Image = new DiscordImage
                 {
-                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.Url
+                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.RemoteUrl
                 };
             }
 
@@ -65,8 +64,9 @@ namespace NzbDrone.Core.Notifications.Discord
                 switch ((DiscordGrabFieldType)field)
                 {
                     case DiscordGrabFieldType.Overview:
+                        var overview = message.Movie.MovieMetadata.Value.Overview ?? "";
                         discordField.Name = "Overview";
-                        discordField.Value = message.Movie.MovieMetadata.Value.Overview.Length <= 300 ? message.Movie.MovieMetadata.Value.Overview : message.Movie.MovieMetadata.Value.Overview.Substring(0, 300) + "...";
+                        discordField.Value = overview.Length <= 300 ? overview : $"{overview.AsSpan(0, 300)}...";
                         break;
                     case DiscordGrabFieldType.Rating:
                         discordField.Name = "Rating";
@@ -106,6 +106,10 @@ namespace NzbDrone.Core.Notifications.Discord
                         discordField.Name = "Custom Format Score";
                         discordField.Value = message.RemoteMovie.CustomFormatScore.ToString();
                         break;
+                    case DiscordGrabFieldType.Indexer:
+                        discordField.Name = "Indexer";
+                        discordField.Value = message.RemoteMovie.Release.Indexer;
+                        break;
                 }
 
                 if (discordField.Name.IsNotNullOrWhiteSpace() && discordField.Value.IsNotNullOrWhiteSpace())
@@ -131,7 +135,7 @@ namespace NzbDrone.Core.Notifications.Discord
                 },
                 Url = $"https://www.themoviedb.org/movie/{message.Movie.MovieMetadata.Value.TmdbId}",
                 Description = isUpgrade ? "Movie Upgraded" : "Movie Imported",
-                Title = message.Movie.MovieMetadata.Value.Year > 0 ? $"{message.Movie.MovieMetadata.Value.Title} ({message.Movie.MovieMetadata.Value.Year})" : message.Movie.MovieMetadata.Value.Title,
+                Title = GetTitle(message.Movie),
                 Color = isUpgrade ? (int)DiscordColors.Upgrade : (int)DiscordColors.Success,
                 Fields = new List<DiscordField>(),
                 Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
@@ -141,7 +145,7 @@ namespace NzbDrone.Core.Notifications.Discord
             {
                 embed.Thumbnail = new DiscordImage
                 {
-                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.Url
+                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.RemoteUrl
                 };
             }
 
@@ -149,7 +153,7 @@ namespace NzbDrone.Core.Notifications.Discord
             {
                 embed.Image = new DiscordImage
                 {
-                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.Url
+                    Url = message.Movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.RemoteUrl
                 };
             }
 
@@ -160,8 +164,9 @@ namespace NzbDrone.Core.Notifications.Discord
                 switch ((DiscordImportFieldType)field)
                 {
                     case DiscordImportFieldType.Overview:
+                        var overview = message.Movie.MovieMetadata.Value.Overview ?? "";
                         discordField.Name = "Overview";
-                        discordField.Value = message.Movie.MovieMetadata.Value.Overview.Length <= 300 ? message.Movie.MovieMetadata.Value.Overview : message.Movie.MovieMetadata.Value.Overview.Substring(0, 300) + "...";
+                        discordField.Value = overview.Length <= 300 ? overview : $"{overview.AsSpan(0, 300)}...";
                         break;
                     case DiscordImportFieldType.Rating:
                         discordField.Name = "Rating";
@@ -222,11 +227,48 @@ namespace NzbDrone.Core.Notifications.Discord
             _proxy.SendPayload(payload, Settings);
         }
 
+        public override void OnMovieAdded(Movie movie)
+        {
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Url = $"https://www.themoviedb.org/movie/{movie.MovieMetadata.Value.TmdbId}",
+                Title = movie.Title,
+                Description = "Movie Added",
+                Color = (int)DiscordColors.Success,
+                Fields = new List<DiscordField> { new () { Name = "Links", Value = GetLinksString(movie) } }
+            };
+
+            if (Settings.ImportFields.Contains((int)DiscordImportFieldType.Poster))
+            {
+                embed.Thumbnail = new DiscordImage
+                {
+                    Url = movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.Url
+                };
+            }
+
+            if (Settings.ImportFields.Contains((int)DiscordImportFieldType.Fanart))
+            {
+                embed.Image = new DiscordImage
+                {
+                    Url = movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.Url
+                };
+            }
+
+            var payload = CreatePayload(null, new List<Embed> { embed });
+
+            _proxy.SendPayload(payload, Settings);
+        }
+
         public override void OnMovieRename(Movie movie, List<RenamedMovieFile> renamedFiles)
         {
             var attachments = new List<Embed>();
 
-            foreach (RenamedMovieFile renamedFile in renamedFiles)
+            foreach (var renamedFile in renamedFiles)
             {
                 attachments.Add(new Embed
                 {
@@ -244,16 +286,37 @@ namespace NzbDrone.Core.Notifications.Discord
         {
             var movie = deleteMessage.Movie;
 
-            var attachments = new List<Embed>
-                              {
-                                  new Embed
-                                  {
-                                      Title = movie.MovieMetadata.Value.Title,
-                                      Description = deleteMessage.DeletedFilesMessage
-                                  }
-                              };
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Url = $"https://www.themoviedb.org/movie/{movie.MovieMetadata.Value.TmdbId}",
+                Title = movie.Title,
+                Description = deleteMessage.DeletedFilesMessage,
+                Color = (int)DiscordColors.Danger,
+                Fields = new List<DiscordField> { new () { Name = "Links", Value = GetLinksString(movie) } }
+            };
 
-            var payload = CreatePayload("Movie Deleted", attachments);
+            if (Settings.ImportFields.Contains((int)DiscordImportFieldType.Poster))
+            {
+                embed.Thumbnail = new DiscordImage
+                {
+                    Url = movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.Url
+                };
+            }
+
+            if (Settings.ImportFields.Contains((int)DiscordImportFieldType.Fanart))
+            {
+                embed.Image = new DiscordImage
+                {
+                    Url = movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.Url
+                };
+            }
+
+            var payload = CreatePayload(null, new List<Embed> { embed });
 
             _proxy.SendPayload(payload, Settings);
         }
@@ -261,76 +324,190 @@ namespace NzbDrone.Core.Notifications.Discord
         public override void OnMovieFileDelete(MovieFileDeleteMessage deleteMessage)
         {
             var movie = deleteMessage.Movie;
+            var deletedFile = deleteMessage.MovieFile.Path;
+            var reason = deleteMessage.Reason;
 
-            var fullPath = Path.Combine(deleteMessage.Movie.Path, deleteMessage.MovieFile.RelativePath);
-            var attachments = new List<Embed>
-                              {
-                                  new Embed
-                                  {
-                                      Title = movie.MovieMetadata.Value.Title,
-                                      Description = deleteMessage.MovieFile.Path
-                                  }
-                              };
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Url = $"https://www.themoviedb.org/movie/{movie.MovieMetadata.Value.TmdbId}",
+                Title = GetTitle(movie),
+                Description = "Movie File Deleted",
+                Color = (int)DiscordColors.Danger,
+                Fields = new List<DiscordField>
+                {
+                    new () { Name = "Reason", Value = reason.ToString() },
+                    new () { Name = "File name", Value = string.Format("```{0}```", deletedFile) }
+                },
+                Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            };
 
-            var payload = CreatePayload("Movie File Deleted", attachments);
+            var payload = CreatePayload(null, new List<Embed> { embed });
 
             _proxy.SendPayload(payload, Settings);
         }
 
         public override void OnHealthIssue(HealthCheck.HealthCheck healthCheck)
         {
-            var attachments = new List<Embed>
-                              {
-                                  new Embed
-                                  {
-                                      Author = new DiscordAuthor
-                                      {
-                                          Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
-                                          IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
-                                      },
-                                      Title = healthCheck.Source.Name,
-                                      Description = healthCheck.Message,
-                                      Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-                                      Color = healthCheck.Type == HealthCheck.HealthCheckResult.Warning ? (int)DiscordColors.Warning : (int)DiscordColors.Danger
-                                  }
-                              };
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Title = healthCheck.Source.Name,
+                Description = healthCheck.Message,
+                Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Color = healthCheck.Type == HealthCheck.HealthCheckResult.Warning ? (int)DiscordColors.Warning : (int)DiscordColors.Danger
+            };
 
-            var payload = CreatePayload(null, attachments);
+            var payload = CreatePayload(null, new List<Embed> { embed });
+
+            _proxy.SendPayload(payload, Settings);
+        }
+
+        public override void OnHealthRestored(HealthCheck.HealthCheck previousCheck)
+        {
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Title = "Health Issue Resolved: " + previousCheck.Source.Name,
+                Description = $"The following issue is now resolved: {previousCheck.Message}",
+                Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Color = (int)DiscordColors.Success
+            };
+
+            var payload = CreatePayload(null, new List<Embed> { embed });
 
             _proxy.SendPayload(payload, Settings);
         }
 
         public override void OnApplicationUpdate(ApplicationUpdateMessage updateMessage)
         {
-            var attachments = new List<Embed>
-                              {
-                                  new Embed
-                                  {
-                                      Author = new DiscordAuthor
-                                      {
-                                          Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
-                                          IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
-                                      },
-                                      Title = APPLICATION_UPDATE_TITLE,
-                                      Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-                                      Color = (int)DiscordColors.Standard,
-                                      Fields = new List<DiscordField>()
-                                      {
-                                          new DiscordField()
-                                          {
-                                              Name = "Previous Version",
-                                              Value = updateMessage.PreviousVersion.ToString()
-                                          },
-                                          new DiscordField()
-                                          {
-                                              Name = "New Version",
-                                              Value = updateMessage.NewVersion.ToString()
-                                          }
-                                      },
-                                  }
-                              };
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Title = APPLICATION_UPDATE_TITLE,
+                Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Color = (int)DiscordColors.Standard,
+                Fields = new List<DiscordField>
+                {
+                    new ()
+                    {
+                        Name = "Previous Version",
+                        Value = updateMessage.PreviousVersion.ToString()
+                    },
+                    new ()
+                    {
+                        Name = "New Version",
+                        Value = updateMessage.NewVersion.ToString()
+                    }
+                },
+            };
 
-            var payload = CreatePayload(null, attachments);
+            var payload = CreatePayload(null, new List<Embed> { embed });
+
+            _proxy.SendPayload(payload, Settings);
+        }
+
+        public override void OnManualInteractionRequired(ManualInteractionRequiredMessage message)
+        {
+            var movie = message.Movie;
+
+            var embed = new Embed
+            {
+                Author = new DiscordAuthor
+                {
+                    Name = Settings.Author.IsNullOrWhiteSpace() ? Environment.MachineName : Settings.Author,
+                    IconUrl = "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+                },
+                Url = $"https://www.themoviedb.org/movie/{movie.MovieMetadata.Value.TmdbId}",
+                Description = "Manual interaction needed",
+                Title = GetTitle(movie),
+                Color = (int)DiscordColors.Standard,
+                Fields = new List<DiscordField>(),
+                Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            };
+
+            if (Settings.ManualInteractionFields.Contains((int)DiscordGrabFieldType.Poster))
+            {
+                embed.Thumbnail = new DiscordImage
+                {
+                    Url = movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Poster)?.RemoteUrl
+                };
+            }
+
+            if (Settings.ManualInteractionFields.Contains((int)DiscordGrabFieldType.Fanart))
+            {
+                embed.Image = new DiscordImage
+                {
+                    Url = movie.MovieMetadata.Value.Images.FirstOrDefault(x => x.CoverType == MediaCoverTypes.Fanart)?.RemoteUrl
+                };
+            }
+
+            foreach (var field in Settings.ManualInteractionFields)
+            {
+                var discordField = new DiscordField();
+
+                switch ((DiscordManualInteractionFieldType)field)
+                {
+                    case DiscordManualInteractionFieldType.Overview:
+                        var overview = movie.MovieMetadata.Value.Overview ?? "";
+                        discordField.Name = "Overview";
+                        discordField.Value = overview.Length <= 300 ? overview : $"{overview.AsSpan(0, 300)}...";
+                        break;
+                    case DiscordManualInteractionFieldType.Rating:
+                        discordField.Name = "Rating";
+                        discordField.Value = movie.MovieMetadata.Value.Ratings.Tmdb?.Value.ToString() ?? string.Empty;
+                        break;
+                    case DiscordManualInteractionFieldType.Genres:
+                        discordField.Name = "Genres";
+                        discordField.Value = movie.MovieMetadata.Value.Genres.Take(5).Join(", ");
+                        break;
+                    case DiscordManualInteractionFieldType.Quality:
+                        discordField.Name = "Quality";
+                        discordField.Inline = true;
+                        discordField.Value = message.Quality.Quality.Name;
+                        break;
+                    case DiscordManualInteractionFieldType.Group:
+                        discordField.Name = "Group";
+                        discordField.Value = message.RemoteMovie.ParsedMovieInfo.ReleaseGroup;
+                        break;
+                    case DiscordManualInteractionFieldType.Size:
+                        discordField.Name = "Size";
+                        discordField.Value = BytesToString(message.TrackedDownload.DownloadItem.TotalSize);
+                        discordField.Inline = true;
+                        break;
+                    case DiscordManualInteractionFieldType.DownloadTitle:
+                        discordField.Name = "Download";
+                        discordField.Value = string.Format("```{0}```", message.TrackedDownload.DownloadItem.Title);
+                        break;
+                    case DiscordManualInteractionFieldType.Links:
+                        discordField.Name = "Links";
+                        discordField.Value = GetLinksString(message.Movie);
+                        break;
+                }
+
+                if (discordField.Name.IsNotNullOrWhiteSpace() && discordField.Value.IsNotNullOrWhiteSpace())
+                {
+                    embed.Fields.Add(discordField);
+                }
+            }
+
+            var payload = CreatePayload(null, new List<Embed> { embed });
 
             _proxy.SendPayload(payload, Settings);
         }
@@ -419,6 +596,13 @@ namespace NzbDrone.Core.Notifications.Discord
             }
 
             return links;
+        }
+
+        private string GetTitle(Movie movie)
+        {
+            var title = movie.MovieMetadata.Value.Year > 0 ? $"{movie.MovieMetadata.Value.Title} ({movie.MovieMetadata.Value.Year})" : movie.MovieMetadata.Value.Title;
+
+            return title.Length > 256 ? $"{title.AsSpan(0, 253)}..." : title;
         }
     }
 }

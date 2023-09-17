@@ -60,9 +60,7 @@ namespace NzbDrone.Core.Extras
                 return;
             }
 
-            var folderSearchOption = localMovie.FolderMovieInfo == null
-                ? SearchOption.TopDirectoryOnly
-                : SearchOption.AllDirectories;
+            var folderSearchOption = localMovie.FolderMovieInfo != null;
 
             var wantedExtensions = _configService.ExtraFileExtensions.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                                                                      .Select(e => e.Trim(' ', '.')
@@ -83,7 +81,7 @@ namespace NzbDrone.Core.Extras
                     continue;
                 }
 
-                for (int i = 0; i < _extraFileManagers.Count; i++)
+                for (var i = 0; i < _extraFileManagers.Count; i++)
                 {
                     if (_extraFileManagers[i].CanImportFile(localMovie, movieFile, file, extension, isReadOnly))
                     {
@@ -93,7 +91,7 @@ namespace NzbDrone.Core.Extras
                 }
             }
 
-            for (int i = 0; i < _extraFileManagers.Count; i++)
+            for (var i = 0; i < _extraFileManagers.Count; i++)
             {
                 _extraFileManagers[i].ImportFiles(localMovie, movieFile, managedFiles[i], isReadOnly);
             }

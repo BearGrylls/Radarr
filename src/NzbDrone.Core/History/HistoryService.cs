@@ -11,14 +11,14 @@ using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies.Events;
 using NzbDrone.Core.Parser.Model;
-using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.History
 {
     public interface IHistoryService
     {
-        QualityModel GetBestQualityInHistory(Profile profile, int movieId);
+        QualityModel GetBestQualityInHistory(QualityProfile profile, int movieId);
         PagingSpec<MovieHistory> Paged(PagingSpec<MovieHistory> pagingSpec);
         MovieHistory MostRecentForMovie(int movieId);
         MovieHistory MostRecentForDownloadId(string downloadId);
@@ -84,12 +84,11 @@ namespace NzbDrone.Core.History
             return _historyRepository.GetByMovieId(movieId, eventType);
         }
 
-        public QualityModel GetBestQualityInHistory(Profile profile, int movieId)
+        public QualityModel GetBestQualityInHistory(QualityProfile profile, int movieId)
         {
             var comparer = new QualityModelComparer(profile);
-            return _historyRepository.GetBestQualityInHistory(movieId)
-                .OrderByDescending(q => q, comparer)
-                .FirstOrDefault();
+
+            return _historyRepository.GetBestQualityInHistory(movieId).MaxBy(q => q, comparer);
         }
 
         public void UpdateMany(List<MovieHistory> toUpdate)
@@ -132,7 +131,7 @@ namespace NzbDrone.Core.History
                 EventType = MovieHistoryEventType.Grabbed,
                 Date = DateTime.UtcNow,
                 Quality = message.Movie.ParsedMovieInfo.Quality,
-                Languages = message.Movie.ParsedMovieInfo.Languages,
+                Languages = message.Movie.Languages,
                 SourceTitle = message.Movie.Release.Title,
                 DownloadId = message.DownloadId,
                 MovieId = message.Movie.Movie.Id
@@ -153,6 +152,8 @@ namespace NzbDrone.Core.History
             history.Data.Add("TmdbId", message.Movie.Release.TmdbId.ToString());
             history.Data.Add("Protocol", ((int)message.Movie.Release.DownloadProtocol).ToString());
             history.Data.Add("CustomFormatScore", message.Movie.CustomFormatScore.ToString());
+            history.Data.Add("MovieMatchType", message.Movie.MovieMatchType.ToString());
+            history.Data.Add("ReleaseSource", message.Movie.ReleaseSource.ToString());
             history.Data.Add("IndexerFlags", message.Movie.Release.IndexerFlags.ToString());
             history.Data.Add("IndexerId", message.Movie.Release.IndexerId.ToString());
 
@@ -161,9 +162,7 @@ namespace NzbDrone.Core.History
                 history.Data.Add("ReleaseHash", message.Movie.ParsedMovieInfo.ReleaseHash);
             }
 
-            var torrentRelease = message.Movie.Release as TorrentInfo;
-
-            if (torrentRelease != null)
+            if (message.Movie.Release is TorrentInfo torrentRelease)
             {
                 history.Data.Add("TorrentInfoHash", torrentRelease.InfoHash);
             }
@@ -203,6 +202,8 @@ namespace NzbDrone.Core.History
             history.Data.Add("DownloadClient", message.DownloadClientInfo?.Type);
             history.Data.Add("DownloadClientName", message.DownloadClientInfo?.Name);
             history.Data.Add("ReleaseGroup", message.MovieInfo.ReleaseGroup);
+            history.Data.Add("CustomFormatScore", message.MovieInfo.CustomFormatScore.ToString());
+            history.Data.Add("IndexerFlags", message.ImportedMovie.IndexerFlags.ToString());
 
             _historyRepository.Insert(history);
         }
@@ -227,6 +228,7 @@ namespace NzbDrone.Core.History
 
             history.Data.Add("Reason", message.Reason.ToString());
             history.Data.Add("ReleaseGroup", message.MovieFile.ReleaseGroup);
+            history.Data.Add("IndexerFlags", message.MovieFile.IndexerFlags.ToString());
 
             _historyRepository.Insert(history);
         }
@@ -253,6 +255,7 @@ namespace NzbDrone.Core.History
             history.Data.Add("Path", path);
             history.Data.Add("RelativePath", relativePath);
             history.Data.Add("ReleaseGroup", message.MovieFile.ReleaseGroup);
+            history.Data.Add("IndexerFlags", message.MovieFile.IndexerFlags.ToString());
 
             _historyRepository.Insert(history);
         }

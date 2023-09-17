@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Cache;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.Indexers;
 
@@ -9,7 +10,7 @@ namespace NzbDrone.Core.Download
 {
     public interface IProvideDownloadClient
     {
-        IDownloadClient GetDownloadClient(DownloadProtocol downloadProtocol, int indexerId = 0);
+        IDownloadClient GetDownloadClient(DownloadProtocol downloadProtocol, int indexerId = 0, bool filterBlockedClients = false, HashSet<int> tags = null);
         IEnumerable<IDownloadClient> GetDownloadClients(bool filterBlockedClients = false);
         IDownloadClient Get(int id);
     }
@@ -35,9 +36,19 @@ namespace NzbDrone.Core.Download
             _lastUsedDownloadClient = cacheManager.GetCache<int>(GetType(), "lastDownloadClientId");
         }
 
-        public IDownloadClient GetDownloadClient(DownloadProtocol downloadProtocol, int indexerId = 0)
+        public IDownloadClient GetDownloadClient(DownloadProtocol downloadProtocol, int indexerId = 0, bool filterBlockedClients = false, HashSet<int> tags = null)
         {
+            var blockedProviders = new HashSet<int>(_downloadClientStatusService.GetBlockedProviders().Select(v => v.ProviderId));
             var availableProviders = _downloadClientFactory.GetAvailableProviders().Where(v => v.Protocol == downloadProtocol).ToList();
+
+            if (tags != null)
+            {
+                var matchingTagsClients = availableProviders.Where(i => i.Definition.Tags.Intersect(tags).Any()).ToList();
+
+                availableProviders = matchingTagsClients.Count > 0 ?
+                    matchingTagsClients :
+                    availableProviders.Where(i => i.Definition.Tags.Empty()).ToList();
+            }
 
             if (!availableProviders.Any())
             {
@@ -52,11 +63,14 @@ namespace NzbDrone.Core.Download
                 {
                     var client = availableProviders.SingleOrDefault(d => d.Definition.Id == indexer.DownloadClientId);
 
-                    return client ?? throw new DownloadClientUnavailableException($"Indexer specified download client is not available");
+                    if (client == null || (filterBlockedClients && blockedProviders.Contains(client.Definition.Id)))
+                    {
+                        throw new DownloadClientUnavailableException($"Indexer specified download client is not available");
+                    }
+
+                    return client;
                 }
             }
-
-            var blockedProviders = new HashSet<int>(_downloadClientStatusService.GetBlockedProviders().Select(v => v.ProviderId));
 
             if (blockedProviders.Any())
             {
@@ -65,6 +79,10 @@ namespace NzbDrone.Core.Download
                 if (nonBlockedProviders.Any())
                 {
                     availableProviders = nonBlockedProviders;
+                }
+                else if (filterBlockedClients)
+                {
+                    throw new DownloadClientUnavailableException($"All download clients for {downloadProtocol} are not available");
                 }
                 else
                 {
@@ -92,7 +110,7 @@ namespace NzbDrone.Core.Download
 
             if (filterBlockedClients)
             {
-                return FilterBlockedIndexers(enabledClients).ToList();
+                return FilterBlockedDownloadClients(enabledClients).ToList();
             }
 
             return enabledClients;
@@ -103,15 +121,13 @@ namespace NzbDrone.Core.Download
             return _downloadClientFactory.GetAvailableProviders().Single(d => d.Definition.Id == id);
         }
 
-        private IEnumerable<IDownloadClient> FilterBlockedIndexers(IEnumerable<IDownloadClient> clients)
+        private IEnumerable<IDownloadClient> FilterBlockedDownloadClients(IEnumerable<IDownloadClient> clients)
         {
             var blockedClients = _downloadClientStatusService.GetBlockedProviders().ToDictionary(v => v.ProviderId, v => v);
 
             foreach (var client in clients)
             {
-                DownloadClientStatus blockedClientStatus;
-
-                if (blockedClients.TryGetValue(client.Definition.Id, out blockedClientStatus))
+                if (blockedClients.TryGetValue(client.Definition.Id, out var blockedClientStatus))
                 {
                     _logger.Debug("Temporarily ignoring client {0} till {1} due to recent failures.", client.Definition.Name, blockedClientStatus.DisabledTill.Value.ToLocalTime());
                     continue;

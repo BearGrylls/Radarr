@@ -4,7 +4,8 @@ import IconButton from 'Components/Link/IconButton';
 import ConfirmModal from 'Components/Modal/ConfirmModal';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableRow from 'Components/Table/TableRow';
-import { icons, kinds } from 'Helpers/Props';
+import Tooltip from 'Components/Tooltip/Tooltip';
+import { icons, kinds, tooltipPositions } from 'Helpers/Props';
 import MovieFormats from 'Movie/MovieFormats';
 import MovieLanguage from 'Movie/MovieLanguage';
 import MovieQuality from 'Movie/MovieQuality';
@@ -12,6 +13,7 @@ import FileEditModal from 'MovieFile/Edit/FileEditModal';
 import MediaInfoConnector from 'MovieFile/MediaInfoConnector';
 import * as mediaInfoTypes from 'MovieFile/mediaInfoTypes';
 import formatBytes from 'Utilities/Number/formatBytes';
+import formatCustomFormatScore from 'Utilities/Number/formatCustomFormatScore';
 import translate from 'Utilities/String/translate';
 import FileDetailsModal from '../FileDetailsModal';
 import MovieFileRowCellPlaceholder from './MovieFileRowCellPlaceholder';
@@ -78,7 +80,9 @@ class MovieFileEditorRow extends Component {
       quality,
       qualityCutoffNotMet,
       customFormats,
-      languages
+      customFormatScore,
+      languages,
+      columns
     } = this.props;
 
     const {
@@ -88,107 +92,228 @@ class MovieFileEditorRow extends Component {
     } = this.state;
 
     const showQualityPlaceholder = !quality;
-
     const showLanguagePlaceholder = !languages;
 
     return (
       <TableRow>
-        <TableRowCell
-          className={styles.relativePath}
-          title={relativePath}
-        >
-          {relativePath}
-        </TableRowCell>
+        {
+          columns.map((column) => {
+            const {
+              name,
+              isVisible
+            } = column;
 
-        <TableRowCell>
-          <MediaInfoConnector
-            movieFileId={id}
-            type={mediaInfoTypes.VIDEO}
-          />
-        </TableRowCell>
+            if (!isVisible) {
+              return null;
+            }
 
-        <TableRowCell>
-          <MediaInfoConnector
-            movieFileId={id}
-            type={mediaInfoTypes.AUDIO}
-          />
-        </TableRowCell>
+            if (name === 'relativePath') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.relativePath}
+                  title={relativePath}
+                >
+                  {relativePath}
+                </TableRowCell>
+              );
+            }
 
-        <TableRowCell
-          className={styles.size}
-          title={size}
-        >
-          {formatBytes(size)}
-        </TableRowCell>
+            if (name === 'customFormats') {
+              return (
+                <TableRowCell key={name}>
+                  <MovieFormats
+                    formats={customFormats}
+                  />
+                </TableRowCell>
+              );
+            }
 
-        <TableRowCell
-          className={styles.language}
-        >
-          {
-            showLanguagePlaceholder &&
-              <MovieFileRowCellPlaceholder />
-          }
+            if (name === 'customFormatScore') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.customFormatScore}
+                >
+                  <Tooltip
+                    anchor={formatCustomFormatScore(
+                      customFormatScore,
+                      customFormats.length
+                    )}
+                    tooltip={<MovieFormats formats={customFormats} />}
+                    position={tooltipPositions.TOP}
+                  />
+                </TableRowCell>
+              );
+            }
 
-          {
-            !showLanguagePlaceholder && !!languages &&
-              <MovieLanguage
-                className={styles.label}
-                languages={languages}
-              />
-          }
-        </TableRowCell>
+            if (name === 'languages') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.languages}
+                >
+                  {
+                    showLanguagePlaceholder ?
+                      <MovieFileRowCellPlaceholder /> :
+                      null
+                  }
 
-        <TableRowCell
-          className={styles.quality}
-        >
-          {
-            showQualityPlaceholder &&
-              <MovieFileRowCellPlaceholder />
-          }
+                  {
+                    !showLanguagePlaceholder && !!languages &&
+                      <MovieLanguage
+                        className={styles.label}
+                        languages={languages}
+                      />
+                  }
+                </TableRowCell>
+              );
+            }
 
-          {
-            !showQualityPlaceholder && !!quality &&
-              <MovieQuality
-                className={styles.label}
-                quality={quality}
-                isCutoffNotMet={qualityCutoffNotMet}
-              />
-          }
-        </TableRowCell>
+            if (name === 'quality') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.quality}
+                >
+                  {
+                    showQualityPlaceholder ?
+                      <MovieFileRowCellPlaceholder /> :
+                      null
+                  }
 
-        <TableRowCell
-          className={styles.releaseGroup}
-        >
-          {releaseGroup}
-        </TableRowCell>
+                  {
+                    !showQualityPlaceholder && !!quality &&
+                      <MovieQuality
+                        className={styles.label}
+                        quality={quality}
+                        isCutoffNotMet={qualityCutoffNotMet}
+                      />
+                  }
+                </TableRowCell>
+              );
+            }
 
-        <TableRowCell
-          className={styles.formats}
-        >
-          <MovieFormats
-            formats={customFormats}
-          />
-        </TableRowCell>
+            if (name === 'audioInfo') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.audio}
+                >
+                  <MediaInfoConnector
+                    type={mediaInfoTypes.AUDIO}
+                    movieFileId={id}
+                  />
+                </TableRowCell>
+              );
+            }
 
-        <TableRowCell className={styles.actions}>
-          <IconButton
-            title={translate('EditMovieFile')}
-            name={icons.EDIT}
-            onPress={this.onFileEditPress}
-          />
+            if (name === 'audioLanguages') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.audioLanguages}
+                >
+                  <MediaInfoConnector
+                    type={mediaInfoTypes.AUDIO_LANGUAGES}
+                    movieFileId={id}
+                  />
+                </TableRowCell>
+              );
+            }
 
-          <IconButton
-            title={translate('Details')}
-            name={icons.MEDIA_INFO}
-            onPress={this.onFileDetailsPress}
-          />
+            if (name === 'subtitleLanguages') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.subtitles}
+                >
+                  <MediaInfoConnector
+                    type={mediaInfoTypes.SUBTITLES}
+                    movieFileId={id}
+                  />
+                </TableRowCell>
+              );
+            }
 
-          <IconButton
-            title={translate('DeleteFile')}
-            name={icons.REMOVE}
-            onPress={this.onDeletePress}
-          />
-        </TableRowCell>
+            if (name === 'videoCodec') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.video}
+                >
+                  <MediaInfoConnector
+                    type={mediaInfoTypes.VIDEO}
+                    movieFileId={id}
+                  />
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'videoDynamicRangeType') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.videoDynamicRangeType}
+                >
+                  <MediaInfoConnector
+                    type={mediaInfoTypes.VIDEO_DYNAMIC_RANGE_TYPE}
+                    movieFileId={id}
+                  />
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'size') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.size}
+                  title={size}
+                >
+                  {formatBytes(size)}
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'releaseGroup') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.releaseGroup}
+                >
+                  {releaseGroup}
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'actions') {
+              return (
+                <TableRowCell key={name} className={styles.actions}>
+                  <IconButton
+                    title={translate('EditMovieFile')}
+                    name={icons.EDIT}
+                    onPress={this.onFileEditPress}
+                  />
+
+                  <IconButton
+                    title={translate('Details')}
+                    name={icons.MEDIA_INFO}
+                    onPress={this.onFileDetailsPress}
+                  />
+
+                  <IconButton
+                    title={translate('DeleteFile')}
+                    name={icons.REMOVE}
+                    onPress={this.onDeletePress}
+                  />
+                </TableRowCell>
+              );
+            }
+
+            return null;
+          })
+        }
 
         <FileDetailsModal
           isOpen={isFileDetailsModalOpen}
@@ -207,7 +332,7 @@ class MovieFileEditorRow extends Component {
           ids={[id]}
           kind={kinds.DANGER}
           title={translate('DeleteSelectedMovieFiles')}
-          message={translate('DeleteSelectedMovieFilesMessage')}
+          message={translate('DeleteSelectedMovieFilesHelpText')}
           confirmLabel={translate('Delete')}
           onConfirm={this.onConfirmDelete}
           onCancel={this.onConfirmDeleteModalClose}
@@ -225,10 +350,16 @@ MovieFileEditorRow.propTypes = {
   quality: PropTypes.object.isRequired,
   releaseGroup: PropTypes.string,
   customFormats: PropTypes.arrayOf(PropTypes.object).isRequired,
+  customFormatScore: PropTypes.number.isRequired,
   qualityCutoffNotMet: PropTypes.bool.isRequired,
   languages: PropTypes.arrayOf(PropTypes.object).isRequired,
   mediaInfo: PropTypes.object,
+  columns: PropTypes.arrayOf(PropTypes.object).isRequired,
   onDeletePress: PropTypes.func.isRequired
+};
+
+MovieFileEditorRow.defaultProps = {
+  customFormats: []
 };
 
 export default MovieFileEditorRow;

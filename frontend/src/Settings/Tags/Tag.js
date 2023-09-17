@@ -5,10 +5,10 @@ import ConfirmModal from 'Components/Modal/ConfirmModal';
 import { kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
 import TagDetailsModal from './Details/TagDetailsModal';
+import TagInUse from './TagInUse';
 import styles from './Tag.css';
 
 class Tag extends Component {
-
   //
   // Lifecycle
 
@@ -39,7 +39,7 @@ class Tag extends Component {
     });
   };
 
-  onDeleteTagModalClose= () => {
+  onDeleteTagModalClose = () => {
     this.setState({ isDeleteTagModalOpen: false });
   };
 
@@ -54,25 +54,26 @@ class Tag extends Component {
     const {
       label,
       delayProfileIds,
-      notificationIds,
-      restrictionIds,
       importListIds,
-      movieIds,
-      indexerIds
+      notificationIds,
+      releaseProfileIds,
+      indexerIds,
+      downloadClientIds,
+      autoTagIds,
+      movieIds
     } = this.props;
 
-    const {
-      isDetailsModalOpen,
-      isDeleteTagModalOpen
-    } = this.state;
+    const { isDetailsModalOpen, isDeleteTagModalOpen } = this.state;
 
     const isTagUsed = !!(
       delayProfileIds.length ||
-      notificationIds.length ||
-      restrictionIds.length ||
       importListIds.length ||
-      movieIds.length ||
-      indexerIds.length
+      notificationIds.length ||
+      releaseProfileIds.length ||
+      indexerIds.length ||
+      downloadClientIds.length ||
+      autoTagIds.length ||
+      movieIds.length
     );
 
     return (
@@ -81,74 +82,68 @@ class Tag extends Component {
         overlayContent={true}
         onPress={this.onShowDetailsPress}
       >
-        <div className={styles.label}>
-          {label}
-        </div>
+        <div className={styles.label}>{label}</div>
 
         {
-          isTagUsed &&
+          isTagUsed ?
             <div>
-              {
-                !!movieIds.length &&
-                  <div>
-                    {movieIds.length} movies
-                  </div>
-              }
+              <TagInUse
+                label="movie"
+                count={movieIds.length}
+              />
 
-              {
-                !!delayProfileIds.length &&
-                  <div>
-                    {delayProfileIds.length} delay profile{delayProfileIds.length > 1 && 's'}
-                  </div>
-              }
+              <TagInUse
+                label="delay profile"
+                count={delayProfileIds.length}
+              />
 
-              {
-                !!notificationIds.length &&
-                  <div>
-                    {notificationIds.length} connection{notificationIds.length > 1 && 's'}
-                  </div>
-              }
+              <TagInUse
+                label="import list"
+                count={importListIds.length}
+              />
 
-              {
-                !!restrictionIds.length &&
-                  <div>
-                    {restrictionIds.length} restriction{restrictionIds.length > 1 && 's'}
-                  </div>
-              }
+              <TagInUse
+                label="connection"
+                count={notificationIds.length}
+              />
 
-              {
-                !!importListIds.length &&
-                  <div>
-                    {importListIds.length} list{importListIds.length > 1 && 's'}
-                  </div>
-              }
+              <TagInUse
+                label="release profile"
+                count={releaseProfileIds.length}
+              />
 
-              {
-                indexerIds.length ?
-                  <div>
-                    {indexerIds.length} indexer{indexerIds.length > 1 && 's'}
-                  </div> :
-                  null
-              }
-            </div>
+              <TagInUse
+                label="indexer"
+                count={indexerIds.length}
+              />
+
+              <TagInUse
+                label="download client"
+                count={downloadClientIds.length}
+              />
+
+              <TagInUse
+                label="auto tagging"
+                count={autoTagIds.length}
+                shouldPluralize={false}
+              />
+            </div> :
+            null
         }
 
-        {
-          !isTagUsed &&
-            <div>
-              {translate('NoLinks')}
-            </div>
-        }
+        {!isTagUsed && <div>{translate('NoLinks')}</div>}
 
         <TagDetailsModal
           label={label}
           isTagUsed={isTagUsed}
           movieIds={movieIds}
           delayProfileIds={delayProfileIds}
-          notificationIds={notificationIds}
-          restrictionIds={restrictionIds}
           importListIds={importListIds}
+          notificationIds={notificationIds}
+          releaseProfileIds={releaseProfileIds}
           indexerIds={indexerIds}
+          downloadClientIds={downloadClientIds}
+          autoTagIds={autoTagIds}
           isOpen={isDetailsModalOpen}
           onModalClose={this.onDetailsModalClose}
           onDeleteTagPress={this.onDeleteTagPress}
@@ -158,7 +153,7 @@ class Tag extends Component {
           isOpen={isDeleteTagModalOpen}
           kind={kinds.DANGER}
           title={translate('DeleteTag')}
-          message={translate('DeleteTagMessageText', [label])}
+          message={translate('DeleteTagMessageText', { label })}
           confirmLabel={translate('Delete')}
           onConfirm={this.onConfirmDeleteTag}
           onCancel={this.onDeleteTagModalClose}
@@ -172,21 +167,25 @@ Tag.propTypes = {
   id: PropTypes.number.isRequired,
   label: PropTypes.string.isRequired,
   delayProfileIds: PropTypes.arrayOf(PropTypes.number).isRequired,
-  notificationIds: PropTypes.arrayOf(PropTypes.number).isRequired,
-  restrictionIds: PropTypes.arrayOf(PropTypes.number).isRequired,
   importListIds: PropTypes.arrayOf(PropTypes.number).isRequired,
-  movieIds: PropTypes.arrayOf(PropTypes.number).isRequired,
+  notificationIds: PropTypes.arrayOf(PropTypes.number).isRequired,
+  releaseProfileIds: PropTypes.arrayOf(PropTypes.number).isRequired,
   indexerIds: PropTypes.arrayOf(PropTypes.number).isRequired,
+  downloadClientIds: PropTypes.arrayOf(PropTypes.number).isRequired,
+  autoTagIds: PropTypes.arrayOf(PropTypes.number).isRequired,
+  movieIds: PropTypes.arrayOf(PropTypes.number).isRequired,
   onConfirmDeleteTag: PropTypes.func.isRequired
 };
 
 Tag.defaultProps = {
   delayProfileIds: [],
-  notificationIds: [],
-  restrictionIds: [],
   importListIds: [],
-  movieIds: [],
-  indexerIds: []
+  notificationIds: [],
+  releaseProfileIds: [],
+  indexerIds: [],
+  downloadClientIds: [],
+  autoTagIds: [],
+  movieIds: []
 };
 
 export default Tag;

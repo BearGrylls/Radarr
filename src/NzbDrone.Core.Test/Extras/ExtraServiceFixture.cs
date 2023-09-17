@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using FizzWare.NBuilder;
 using Moq;
 using NUnit.Framework;
@@ -109,12 +108,12 @@ namespace NzbDrone.Core.Test.Extras
 
         private void WithExistingFiles(List<string> files)
         {
-            foreach (string file in files)
+            foreach (var file in files)
             {
                 WithExistingFile(file);
             }
 
-            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(_releaseFolder, It.IsAny<SearchOption>()))
+            Mocker.GetMock<IDiskProvider>().Setup(s => s.GetFiles(_releaseFolder, It.IsAny<bool>()))
                   .Returns(files.ToArray());
         }
 
@@ -217,8 +216,8 @@ namespace NzbDrone.Core.Test.Extras
 
             Subject.ImportMovie(_localMovie, _movieFile, true);
 
-            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, SearchOption.AllDirectories), Times.Once);
-            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, SearchOption.TopDirectoryOnly), Times.Never);
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, true), Times.Once);
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, false), Times.Never);
         }
 
         [Test]
@@ -238,8 +237,8 @@ namespace NzbDrone.Core.Test.Extras
 
             Subject.ImportMovie(_localMovie, _movieFile, true);
 
-            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, SearchOption.AllDirectories), Times.Never);
-            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, SearchOption.TopDirectoryOnly), Times.Once);
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, true), Times.Never);
+            Mocker.GetMock<IDiskProvider>().Verify(v => v.GetFiles(_releaseFolder, false), Times.Once);
         }
     }
 }

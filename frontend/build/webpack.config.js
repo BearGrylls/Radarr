@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const webpack = require('webpack');
 const FileManagerPlugin = require('filemanager-webpack-plugin');
@@ -5,6 +6,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const LiveReloadPlugin = require('webpack-livereload-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 module.exports = (env) => {
   const uiFolder = 'UI';
@@ -34,17 +36,22 @@ module.exports = (env) => {
     },
 
     entry: {
-      index: 'index.js'
+      index: 'index.ts'
     },
 
     resolve: {
+      extensions: [
+        '.ts',
+        '.tsx',
+        '.js'
+      ],
       modules: [
         srcFolder,
         path.join(srcFolder, 'Shims'),
         'node_modules'
       ],
       alias: {
-        jquery: 'jquery/src/jquery'
+        jquery: 'jquery/dist/jquery.min'
       },
       fallback: {
         buffer: false,
@@ -59,21 +66,21 @@ module.exports = (env) => {
     output: {
       path: distFolder,
       publicPath: '/',
-      filename: '[name].js',
+      filename: '[name]-[contenthash].js',
       sourceMapFilename: '[file].map'
     },
 
     optimization: {
       moduleIds: 'deterministic',
-      chunkIds: 'named',
-      splitChunks: {
-        chunks: 'initial',
-        name: 'vendors'
-      }
+      chunkIds: isProduction ? 'deterministic' : 'named'
     },
 
     performance: {
       hints: false
+    },
+
+    experiments: {
+      topLevelAwait: true
     },
 
     plugins: [
@@ -83,13 +90,15 @@ module.exports = (env) => {
       }),
 
       new MiniCssExtractPlugin({
-        filename: 'Content/styles.css'
+        filename: 'Content/styles.css',
+        chunkFilename: 'Content/[id]-[chunkhash].css'
       }),
 
       new HtmlWebpackPlugin({
         template: 'frontend/src/index.ejs',
         filename: 'index.html',
-        publicPath: '/'
+        publicPath: '/',
+        inject: false
       }),
 
       new FileManagerPlugin({
@@ -130,6 +139,8 @@ module.exports = (env) => {
         }
       }),
 
+      new ForkTsCheckerWebpackPlugin(),
+
       new LiveReloadPlugin()
     ],
 
@@ -153,7 +164,7 @@ module.exports = (env) => {
           }
         },
         {
-          test: /\.js?$/,
+          test: [/\.jsx?$/, /\.tsx?$/],
           exclude: /(node_modules|JsLibraries)/,
           use: [
             {
@@ -184,6 +195,7 @@ module.exports = (env) => {
           exclude: /(node_modules|globals.css)/,
           use: [
             { loader: MiniCssExtractPlugin.loader },
+            { loader: 'css-modules-typescript-loader' },
             {
               loader: 'css-loader',
               options: {
@@ -223,6 +235,7 @@ module.exports = (env) => {
             {
               loader: 'url-loader',
               options: {
+                limit: 10240,
                 mimetype: 'application/font-woff',
                 emitFile: false,
                 name: 'Content/Fonts/[name].[ext]'
@@ -251,18 +264,19 @@ module.exports = (env) => {
     config.resolve.alias['react-dom$'] = 'react-dom/profiling';
     config.resolve.alias['scheduler/tracing'] = 'scheduler/tracing-profiling';
 
-    config.optimization.minimizer = [
-      new TerserPlugin({
-        cache: true,
-        parallel: true,
-        sourceMap: true, // Must be set to true if using source-maps in production
-        terserOptions: {
-          mangle: false,
-          keep_classnames: true,
-          keep_fnames: true
-        }
-      })
-    ];
+    config.optimization = {
+      minimize: true,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            sourceMap: true, // Must be set to true if using source-maps in production
+            mangle: false,
+            keep_classnames: true,
+            keep_fnames: true
+          }
+        })
+      ]
+    };
   }
 
   return config;

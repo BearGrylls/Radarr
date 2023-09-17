@@ -67,11 +67,23 @@ namespace NzbDrone.Core.Notifications.Email
             SendEmail(Settings, HEALTH_ISSUE_TITLE_BRANDED, message.Message);
         }
 
+        public override void OnHealthRestored(HealthCheck.HealthCheck previousMessage)
+        {
+            SendEmail(Settings, HEALTH_RESTORED_TITLE_BRANDED, $"The following issue is now resolved: {previousMessage.Message}");
+        }
+
         public override void OnApplicationUpdate(ApplicationUpdateMessage updateMessage)
         {
             var body = $"{updateMessage.Message}";
 
             SendEmail(Settings, APPLICATION_UPDATE_TITLE_BRANDED, body);
+        }
+
+        public override void OnManualInteractionRequired(ManualInteractionRequiredMessage message)
+        {
+            var body = $"{message.Message} requires manual interaction.";
+
+            SendEmail(Settings, MANUAL_INTERACTION_REQUIRED_TITLE_BRANDED, body);
         }
 
         public override ValidationResult Test()
@@ -83,30 +95,13 @@ namespace NzbDrone.Core.Notifications.Email
             return new ValidationResult(failures);
         }
 
-        public ValidationFailure Test(EmailSettings settings)
-        {
-            const string body = "Success! You have properly configured your email notification settings";
-
-            try
-            {
-                SendEmail(settings, "Radarr - Test Notification", body);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Unable to send test email");
-                return new ValidationFailure("Server", "Unable to send test email");
-            }
-
-            return null;
-        }
-
         private void SendEmail(EmailSettings settings, string subject, string body, bool htmlBody = false)
         {
             var email = new MimeMessage();
 
             email.From.Add(ParseAddress("From", settings.From));
             email.To.AddRange(settings.To.Select(x => ParseAddress("To", x)));
-            email.Cc.AddRange(settings.CC.Select(x => ParseAddress("CC", x)));
+            email.Cc.AddRange(settings.Cc.Select(x => ParseAddress("CC", x)));
             email.Bcc.AddRange(settings.Bcc.Select(x => ParseAddress("BCC", x)));
 
             email.Subject = subject;
@@ -129,52 +124,67 @@ namespace NzbDrone.Core.Notifications.Email
                 throw;
             }
 
-            _logger.Debug("Finished sending email. Subject: {0}", email.Subject);
+            _logger.Debug("Finished sending email. Subject: {0}", subject);
         }
 
         private void Send(MimeMessage email, EmailSettings settings)
         {
-            using (var client = new SmtpClient())
+            using var client = new SmtpClient();
+            client.Timeout = 10000;
+
+            var serverOption = SecureSocketOptions.Auto;
+
+            if (settings.RequireEncryption)
             {
-                client.Timeout = 10000;
-
-                var serverOption = SecureSocketOptions.Auto;
-
-                if (settings.RequireEncryption)
+                if (settings.Port == 465)
                 {
-                    if (settings.Port == 465)
-                    {
-                        serverOption = SecureSocketOptions.SslOnConnect;
-                    }
-                    else
-                    {
-                        serverOption = SecureSocketOptions.StartTls;
-                    }
+                    serverOption = SecureSocketOptions.SslOnConnect;
                 }
-
-                client.ServerCertificateValidationCallback = _certificateValidationService.ShouldByPassValidationError;
-
-                _logger.Debug("Connecting to mail server");
-
-                client.Connect(settings.Server, settings.Port, serverOption);
-
-                if (!string.IsNullOrWhiteSpace(settings.Username))
+                else
                 {
-                    _logger.Debug("Authenticating to mail server");
-
-                    client.Authenticate(settings.Username, settings.Password);
+                    serverOption = SecureSocketOptions.StartTls;
                 }
-
-                _logger.Debug("Sending to mail server");
-
-                client.Send(email);
-
-                _logger.Debug("Sent to mail server, disconnecting");
-
-                client.Disconnect(true);
-
-                _logger.Debug("Disconnecting from mail server");
             }
+
+            client.ServerCertificateValidationCallback = _certificateValidationService.ShouldByPassValidationError;
+
+            _logger.Debug("Connecting to mail server");
+
+            client.Connect(settings.Server, settings.Port, serverOption);
+
+            if (!string.IsNullOrWhiteSpace(settings.Username))
+            {
+                _logger.Debug("Authenticating to mail server");
+
+                client.Authenticate(settings.Username, settings.Password);
+            }
+
+            _logger.Debug("Sending to mail server");
+
+            client.Send(email);
+
+            _logger.Debug("Sent to mail server, disconnecting");
+
+            client.Disconnect(true);
+
+            _logger.Debug("Disconnecting from mail server");
+        }
+
+        public ValidationFailure Test(EmailSettings settings)
+        {
+            const string body = "Success! You have properly configured your email notification settings";
+
+            try
+            {
+                SendEmail(settings, "Radarr - Test Notification", body);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to send test email");
+                return new ValidationFailure("Server", "Unable to send test email");
+            }
+
+            return null;
         }
 
         private MailboxAddress ParseAddress(string type, string address)

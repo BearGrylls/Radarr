@@ -1,12 +1,27 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import translate from 'Utilities/String/translate';
-import SelectInput from './SelectInput';
+import EnhancedSelectInput from './EnhancedSelectInput';
 
 const availabilityOptions = [
-  { key: 'announced', value: translate('Announced') },
-  { key: 'inCinemas', value: translate('InCinemas') },
-  { key: 'released', value: translate('Released') }
+  {
+    key: 'announced',
+    get value() {
+      return translate('Announced');
+    }
+  },
+  {
+    key: 'inCinemas',
+    get value() {
+      return translate('InCinemas');
+    }
+  },
+  {
+    key: 'released',
+    get value() {
+      return translate('Released');
+    }
+  }
 ];
 
 function AvailabilitySelectInput(props) {
@@ -20,7 +35,7 @@ function AvailabilitySelectInput(props) {
   if (includeNoChange) {
     values.unshift({
       key: 'noChange',
-      value: 'No Change',
+      value: translate('NoChange'),
       disabled: true
     });
   }
@@ -34,7 +49,7 @@ function AvailabilitySelectInput(props) {
   }
 
   return (
-    <SelectInput
+    <EnhancedSelectInput
       {...props}
       values={values}
     />

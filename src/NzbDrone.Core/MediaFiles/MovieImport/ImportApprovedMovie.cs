@@ -8,9 +8,10 @@ using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Extras;
 using NzbDrone.Core.History;
+using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.MediaFiles.Events;
+using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
-using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 
@@ -29,6 +30,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
         private readonly IDiskProvider _diskProvider;
         private readonly IHistoryService _historyService;
         private readonly IEventAggregator _eventAggregator;
+        private readonly IManageCommandQueue _commandQueueManager;
         private readonly Logger _logger;
 
         public ImportApprovedMovie(IUpgradeMediaFiles movieFileUpgrader,
@@ -37,6 +39,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
                                    IDiskProvider diskProvider,
                                    IHistoryService historyService,
                                    IEventAggregator eventAggregator,
+                                   IManageCommandQueue commandQueueManager,
                                    Logger logger)
         {
             _movieFileUpgrader = movieFileUpgrader;
@@ -45,6 +48,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
             _diskProvider = diskProvider;
             _historyService = historyService;
             _eventAggregator = eventAggregator;
+            _commandQueueManager = commandQueueManager;
             _logger = logger;
         }
 
@@ -53,12 +57,13 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
             _logger.Debug("Decisions: {0}", decisions.Count);
 
             // I added a null op for the rare case that the quality is null. TODO: find out why that would even happen in the first place.
-            var qualifiedImports = decisions.Where(c => c.Approved)
-               .GroupBy(c => c.LocalMovie.Movie.Id, (i, s) => s
-                   .OrderByDescending(c => c.LocalMovie.Quality ?? new QualityModel { Quality = Quality.Unknown }, new QualityModelComparer(s.First().LocalMovie.Movie.Profile))
-                   .ThenByDescending(c => c.LocalMovie.Size))
-               .SelectMany(c => c)
-               .ToList();
+            var qualifiedImports = decisions
+                .Where(decision => decision.Approved)
+                .GroupBy(decision => decision.LocalMovie.Movie.Id)
+                .SelectMany(group => group
+                    .OrderByDescending(decision => decision.LocalMovie.Quality ?? new QualityModel { Quality = Quality.Unknown }, new QualityModelComparer(group.First().LocalMovie.Movie.QualityProfile))
+                    .ThenByDescending(decision => decision.LocalMovie.Size))
+                .ToList();
 
             var importResults = new List<ImportResult>();
 
@@ -120,8 +125,8 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
                     {
                         movieFile.SceneName = localMovie.SceneName;
                         movieFile.OriginalFilePath = GetOriginalFilePath(downloadClientItem, localMovie);
-                        var moveResult = _movieFileUpgrader.UpgradeMovieFile(movieFile, localMovie, copyOnly); // TODO: Check if this works
-                        oldFiles = moveResult.OldFiles;
+
+                        oldFiles = _movieFileUpgrader.UpgradeMovieFile(movieFile, localMovie, copyOnly).OldFiles;
                     }
                     else
                     {
@@ -157,6 +162,15 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
                 {
                     _logger.Warn(e, "Couldn't import movie " + localMovie);
                     importResults.Add(new ImportResult(importDecision, "Failed to import movie, Destination already exists."));
+
+                    _commandQueueManager.Push(new RescanMovieCommand(localMovie.Movie.Id));
+                }
+                catch (RecycleBinException e)
+                {
+                    _logger.Warn(e, "Couldn't import movie " + localMovie);
+                    _eventAggregator.PublishEvent(new MovieImportFailedEvent(e, localMovie, newDownload, downloadClientItem));
+
+                    importResults.Add(new ImportResult(importDecision, "Failed to import movie, unable to move existing file to the Recycle Bin."));
                 }
                 catch (Exception e)
                 {

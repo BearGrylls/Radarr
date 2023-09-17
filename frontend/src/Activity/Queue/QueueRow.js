@@ -8,13 +8,15 @@ import ProgressBar from 'Components/ProgressBar';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableSelectCell from 'Components/Table/Cells/TableSelectCell';
 import TableRow from 'Components/Table/TableRow';
-import { icons, kinds } from 'Helpers/Props';
+import Tooltip from 'Components/Tooltip/Tooltip';
+import { icons, kinds, tooltipPositions } from 'Helpers/Props';
 import InteractiveImportModal from 'InteractiveImport/InteractiveImportModal';
 import MovieFormats from 'Movie/MovieFormats';
 import MovieLanguage from 'Movie/MovieLanguage';
 import MovieQuality from 'Movie/MovieQuality';
 import MovieTitleLink from 'Movie/MovieTitleLink';
 import formatBytes from 'Utilities/Number/formatBytes';
+import formatCustomFormatScore from 'Utilities/Number/formatCustomFormatScore';
 import translate from 'Utilities/String/translate';
 import QueueStatusCell from './QueueStatusCell';
 import RemoveQueueItemModal from './RemoveQueueItemModal';
@@ -42,14 +44,14 @@ class QueueRow extends Component {
     this.setState({ isRemoveQueueItemModalOpen: true });
   };
 
-  onRemoveQueueItemModalConfirmed = (blocklist) => {
+  onRemoveQueueItemModalConfirmed = (blocklist, skipRedownload) => {
     const {
       onRemoveQueueItemPress,
       onQueueRowModalOpenOrClose
     } = this.props;
 
     onQueueRowModalOpenOrClose(false);
-    onRemoveQueueItemPress(blocklist);
+    onRemoveQueueItemPress(blocklist, skipRedownload);
 
     this.setState({ isRemoveQueueItemModalOpen: false });
   };
@@ -88,6 +90,7 @@ class QueueRow extends Component {
       movie,
       quality,
       customFormats,
+      customFormatScore,
       languages,
       protocol,
       indexer,
@@ -128,6 +131,7 @@ class QueueRow extends Component {
 
         {
           columns.map((column) => {
+
             const {
               name,
               isVisible
@@ -200,6 +204,24 @@ class QueueRow extends Component {
               );
             }
 
+            if (name === 'customFormatScore') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.customFormatScore}
+                >
+                  <Tooltip
+                    anchor={formatCustomFormatScore(
+                      customFormatScore,
+                      customFormats.length
+                    )}
+                    tooltip={<MovieFormats formats={customFormats} />}
+                    position={tooltipPositions.BOTTOM}
+                  />
+                </TableRowCell>
+              );
+            }
+
             if (name === 'protocol') {
               return (
                 <TableRowCell key={name}>
@@ -230,6 +252,16 @@ class QueueRow extends Component {
               return (
                 <TableRowCell key={name}>
                   {formatBytes(size)}
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'year') {
+              return (
+                <TableRowCell key={name}>
+                  {
+                    movie ? movie.year : ''
+                  }
                 </TableRowCell>
               );
             }
@@ -354,6 +386,7 @@ QueueRow.propTypes = {
   movie: PropTypes.object,
   quality: PropTypes.object.isRequired,
   customFormats: PropTypes.arrayOf(PropTypes.object),
+  customFormatScore: PropTypes.number.isRequired,
   languages: PropTypes.arrayOf(PropTypes.object).isRequired,
   protocol: PropTypes.string.isRequired,
   indexer: PropTypes.string,
@@ -362,6 +395,7 @@ QueueRow.propTypes = {
   estimatedCompletionTime: PropTypes.string,
   timeleft: PropTypes.string,
   size: PropTypes.number,
+  year: PropTypes.number,
   sizeleft: PropTypes.number,
   showRelativeDates: PropTypes.bool.isRequired,
   shortDateFormat: PropTypes.string.isRequired,
@@ -378,6 +412,7 @@ QueueRow.propTypes = {
 };
 
 QueueRow.defaultProps = {
+  customFormats: [],
   isGrabbing: false,
   isRemoving: false
 };

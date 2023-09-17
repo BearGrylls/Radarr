@@ -1,4 +1,6 @@
 import { createAction } from 'redux-actions';
+import createBulkEditItemHandler from 'Store/Actions/Creators/createBulkEditItemHandler';
+import createBulkRemoveItemHandler from 'Store/Actions/Creators/createBulkRemoveItemHandler';
 import createFetchHandler from 'Store/Actions/Creators/createFetchHandler';
 import createFetchSchemaHandler from 'Store/Actions/Creators/createFetchSchemaHandler';
 import createRemoveItemHandler from 'Store/Actions/Creators/createRemoveItemHandler';
@@ -11,6 +13,7 @@ import { createThunk } from 'Store/thunks';
 import getSectionState from 'Utilities/State/getSectionState';
 import selectProviderSchema from 'Utilities/State/selectProviderSchema';
 import updateSectionState from 'Utilities/State/updateSectionState';
+import translate from 'Utilities/String/translate';
 
 //
 // Variables
@@ -33,6 +36,9 @@ export const TEST_INDEXER = 'settings/indexers/testIndexer';
 export const CANCEL_TEST_INDEXER = 'settings/indexers/cancelTestIndexer';
 export const TEST_ALL_INDEXERS = 'settings/indexers/testAllIndexers';
 
+export const BULK_DELETE_INDEXERS = 'settings/indexers/bulkDeleteIndexers';
+export const BULK_EDIT_INDEXERS = 'settings/indexers/bulkEditIndexers';
+
 //
 // Action Creators
 
@@ -47,6 +53,9 @@ export const deleteIndexer = createThunk(DELETE_INDEXER);
 export const testIndexer = createThunk(TEST_INDEXER);
 export const cancelTestIndexer = createThunk(CANCEL_TEST_INDEXER);
 export const testAllIndexers = createThunk(TEST_ALL_INDEXERS);
+
+export const bulkDeleteIndexers = createThunk(BULK_DELETE_INDEXERS);
+export const bulkEditIndexers = createThunk(BULK_EDIT_INDEXERS);
 
 export const setIndexerValue = createAction(SET_INDEXER_VALUE, (payload) => {
   return {
@@ -81,6 +90,8 @@ export default {
     selectedSchema: {},
     isSaving: false,
     saveError: null,
+    isDeleting: false,
+    deleteError: null,
     isTesting: false,
     isTestingAll: false,
     items: [],
@@ -99,7 +110,10 @@ export default {
     [DELETE_INDEXER]: createRemoveItemHandler(section, '/indexer'),
     [TEST_INDEXER]: createTestProviderHandler(section, '/indexer'),
     [CANCEL_TEST_INDEXER]: createCancelTestProviderHandler(section),
-    [TEST_ALL_INDEXERS]: createTestAllProvidersHandler(section, '/indexer')
+    [TEST_ALL_INDEXERS]: createTestAllProvidersHandler(section, '/indexer'),
+
+    [BULK_DELETE_INDEXERS]: createBulkRemoveItemHandler(section, '/indexer/bulk'),
+    [BULK_EDIT_INDEXERS]: createBulkEditItemHandler(section, '/indexer/bulk')
   },
 
   //
@@ -111,6 +125,8 @@ export default {
 
     [SELECT_INDEXER_SCHEMA]: (state, { payload }) => {
       return selectProviderSchema(state, section, payload, (selectedSchema) => {
+        selectedSchema.name = payload.presetName ?? payload.implementationName;
+        selectedSchema.implementationName = payload.implementationName;
         selectedSchema.enableRss = selectedSchema.supportsRss;
         selectedSchema.enableAutomaticSearch = selectedSchema.supportsSearch;
         selectedSchema.enableInteractiveSearch = selectedSchema.supportsSearch;
@@ -137,7 +153,7 @@ export default {
 
       // Set the name in pendingChanges
       newState.pendingChanges = {
-        name: `${item.name} - Copy`
+        name: translate('DefaultNameCopiedProfile', { name: item.name })
       };
 
       return updateSectionState(state, section, newState);

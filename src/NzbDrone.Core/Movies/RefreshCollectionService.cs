@@ -131,7 +131,7 @@ namespace NzbDrone.Core.Movies
                     {
                         TmdbId = m.TmdbId,
                         Title = m.Title,
-                        ProfileId = collection.QualityProfileId,
+                        QualityProfileId = collection.QualityProfileId,
                         RootFolderPath = collection.RootFolderPath,
                         MinimumAvailability = collection.MinimumAvailability,
                         AddOptions = new AddMovieOptions
@@ -139,7 +139,8 @@ namespace NzbDrone.Core.Movies
                             SearchForMovie = collection.SearchOnAdd,
                             AddMethod = AddMovieMethod.Collection
                         },
-                        Monitored = true
+                        Monitored = true,
+                        Tags = collection.Tags
                     }).ToList(), true);
                 }
             }

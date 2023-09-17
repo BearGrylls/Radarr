@@ -111,7 +111,7 @@ namespace NzbDrone.Core.Datastore
         {
             if (!ids.Any())
             {
-                return new List<TModel>();
+                return Array.Empty<TModel>();
             }
 
             var result = Query(x => ids.Contains(x.Id));
@@ -203,7 +203,7 @@ namespace NzbDrone.Core.Datastore
 
             using (var conn = _database.OpenConnection())
             {
-                using (IDbTransaction tran = conn.BeginTransaction(IsolationLevel.ReadCommitted))
+                using (var tran = conn.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
                     foreach (var model in models)
                     {
@@ -429,7 +429,7 @@ namespace NzbDrone.Core.Datastore
             var sortKey = TableMapping.Mapper.GetSortKey(pagingSpec.SortKey);
             var sortDirection = pagingSpec.SortDirection == SortDirection.Descending ? "DESC" : "ASC";
             var pagingOffset = Math.Max(pagingSpec.Page - 1, 0) * pagingSpec.PageSize;
-            builder.OrderBy($"\"{sortKey}\" {sortDirection} LIMIT {pagingSpec.PageSize} OFFSET {pagingOffset}");
+            builder.OrderBy($"\"{sortKey.Table ?? _table}\".\"{sortKey.Column}\" {sortDirection} LIMIT {pagingSpec.PageSize} OFFSET {pagingOffset}");
 
             return queryFunc(builder).ToList();
         }

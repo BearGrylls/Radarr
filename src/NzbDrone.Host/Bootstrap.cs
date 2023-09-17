@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -46,7 +45,7 @@ namespace NzbDrone.Host
             try
             {
                 Logger.Info("Starting Radarr - {0} - Version {1}",
-                            Process.GetCurrentProcess().MainModule.FileName,
+                            Environment.ProcessPath,
                             Assembly.GetExecutingAssembly().GetName().Version);
 
                 var startupContext = new StartupContext(args);
@@ -168,7 +167,7 @@ namespace NzbDrone.Host
                     });
                     builder.ConfigureKestrel(serverOptions =>
                     {
-                        serverOptions.AllowSynchronousIO = true;
+                        serverOptions.AllowSynchronousIO = false;
                         serverOptions.Limits.MaxRequestBodySize = null;
                     });
                     builder.UseStartup<Startup>();
@@ -231,6 +230,8 @@ namespace NzbDrone.Host
             }
             catch (InvalidDataException ex)
             {
+                Logger.Error(ex, ex.Message);
+
                 throw new InvalidConfigFileException($"{configPath} is corrupt or invalid. Please delete the config file and Radarr will recreate it.", ex);
             }
         }

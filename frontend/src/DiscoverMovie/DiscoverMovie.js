@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Alert from 'Components/Alert';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import PageContent from 'Components/Page/PageContent';
 import PageContentBody from 'Components/Page/PageContentBody';
@@ -10,7 +11,7 @@ import PageToolbarButton from 'Components/Page/Toolbar/PageToolbarButton';
 import PageToolbarSection from 'Components/Page/Toolbar/PageToolbarSection';
 import PageToolbarSeparator from 'Components/Page/Toolbar/PageToolbarSeparator';
 import TableOptionsModalWrapper from 'Components/Table/TableOptions/TableOptionsModalWrapper';
-import { align, icons, sortDirections } from 'Helpers/Props';
+import { align, icons, kinds, sortDirections } from 'Helpers/Props';
 import styles from 'Movie/Index/MovieIndex.css';
 import hasDifferentItemsOrOrder from 'Utilities/Object/hasDifferentItemsOrOrder';
 import translate from 'Utilities/String/translate';
@@ -49,8 +50,9 @@ class DiscoverMovie extends Component {
   constructor(props, context) {
     super(props, context);
 
+    this.scrollerRef = React.createRef();
+
     this.state = {
-      scroller: null,
       jumpBarItems: { order: [] },
       jumpToCharacter: null,
       isPosterOptionsModalOpen: false,
@@ -91,10 +93,6 @@ class DiscoverMovie extends Component {
 
   //
   // Control
-
-  setScrollerRef = (ref) => {
-    this.setState({ scroller: ref });
-  };
 
   getSelectedIds = () => {
     if (this.state.allUnselected) {
@@ -258,7 +256,6 @@ class DiscoverMovie extends Component {
     } = this.props;
 
     const {
-      scroller,
       jumpBarItems,
       jumpToCharacter,
       isPosterOptionsModalOpen,
@@ -271,7 +268,7 @@ class DiscoverMovie extends Component {
     const selectedMovieIds = this.getSelectedIds();
 
     const ViewComponent = getViewComponent(view);
-    const isLoaded = !!(!error && isPopulated && items.length && scroller);
+    const isLoaded = !!(!error && isPopulated && items.length && this.scrollerRef.current);
     const hasNoMovie = !totalItems;
 
     return (
@@ -362,10 +359,9 @@ class DiscoverMovie extends Component {
 
         <div className={styles.pageContentBodyWrapper}>
           <PageContentBody
-            registerScroller={this.setScrollerRef}
+            ref={this.scrollerRef}
             className={styles.contentBody}
             innerClassName={styles[`${view}InnerContentBody`]}
-            onScroll={onScroll}
           >
             {
               isFetching && !isPopulated &&
@@ -374,16 +370,16 @@ class DiscoverMovie extends Component {
 
             {
               !isFetching && !!error &&
-                <div>
+                <Alert kind={kinds.DANGER}>
                   {translate('UnableToLoadMovies')}
-                </div>
+                </Alert>
             }
 
             {
               isLoaded &&
                 <div className={styles.contentBodyContainer}>
                   <ViewComponent
-                    scroller={scroller}
+                    scroller={this.scrollerRef.current}
                     items={items}
                     filters={filters}
                     sortKey={sortKey}

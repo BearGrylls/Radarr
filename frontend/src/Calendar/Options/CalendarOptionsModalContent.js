@@ -26,14 +26,16 @@ class CalendarOptionsModalContent extends Component {
       firstDayOfWeek,
       calendarWeekColumnHeader,
       timeFormat,
-      enableColorImpairedMode
+      enableColorImpairedMode,
+      fullColorEvents
     } = props;
 
     this.state = {
       firstDayOfWeek,
       calendarWeekColumnHeader,
       timeFormat,
-      enableColorImpairedMode
+      enableColorImpairedMode,
+      fullColorEvents
     };
   }
 
@@ -94,6 +96,7 @@ class CalendarOptionsModalContent extends Component {
     const {
       showMovieInformation,
       showCutoffUnmetIcon,
+      fullColorEvents,
       onModalClose
     } = this.props;
 
@@ -136,6 +139,18 @@ class CalendarOptionsModalContent extends Component {
                   onChange={this.onOptionInputChange}
                 />
               </FormGroup>
+
+              <FormGroup>
+                <FormLabel>{translate('FullColorEvents')}</FormLabel>
+
+                <FormInputGroup
+                  type={inputTypes.CHECK}
+                  name="fullColorEvents"
+                  value={fullColorEvents}
+                  helpText={translate('FullColorEventsHelpText')}
+                  onChange={this.onOptionInputChange}
+                />
+              </FormGroup>
             </Form>
           </FieldSet>
 
@@ -162,7 +177,7 @@ class CalendarOptionsModalContent extends Component {
                   values={weekColumnOptions}
                   value={calendarWeekColumnHeader}
                   onChange={this.onGlobalInputChange}
-                  helpText={translate('HelpText')}
+                  helpText={translate('SettingsWeekColumnHeaderHelpText')}
                 />
               </FormGroup>
 
@@ -176,7 +191,9 @@ class CalendarOptionsModalContent extends Component {
                   value={timeFormat}
                   onChange={this.onGlobalInputChange}
                 />
-              </FormGroup><FormGroup>
+              </FormGroup>
+
+              <FormGroup>
                 <FormLabel>{translate('EnableColorImpairedMode')}</FormLabel>
 
                 <FormInputGroup
@@ -187,7 +204,6 @@ class CalendarOptionsModalContent extends Component {
                   onChange={this.onGlobalInputChange}
                 />
               </FormGroup>
-
             </Form>
           </FieldSet>
         </ModalBody>
@@ -209,6 +225,7 @@ CalendarOptionsModalContent.propTypes = {
   calendarWeekColumnHeader: PropTypes.string.isRequired,
   timeFormat: PropTypes.string.isRequired,
   enableColorImpairedMode: PropTypes.bool.isRequired,
+  fullColorEvents: PropTypes.bool.isRequired,
   dispatchSetCalendarOption: PropTypes.func.isRequired,
   dispatchSaveUISettings: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired

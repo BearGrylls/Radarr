@@ -15,19 +15,19 @@ import styles from './HistoryDetailsModal.css';
 function getHeaderTitle(eventType) {
   switch (eventType) {
     case 'grabbed':
-      return 'Grabbed';
+      return translate('Grabbed');
     case 'downloadFailed':
-      return 'Download Failed';
+      return translate('DownloadFailed');
     case 'downloadFolderImported':
-      return 'Movie Imported';
+      return translate('MovieImported');
     case 'movieFileDeleted':
-      return 'Movie File Deleted';
+      return translate('MovieFileDeleted');
     case 'movieFileRenamed':
-      return 'Movie File Renamed';
+      return translate('MovieFileRenamed');
     case 'downloadIgnored':
-      return 'Download Ignored';
+      return translate('DownloadIgnored');
     default:
-      return 'Unknown';
+      return translate('Unknown');
   }
 }
 
@@ -37,6 +37,7 @@ function HistoryDetailsModal(props) {
     eventType,
     sourceTitle,
     data,
+    downloadId,
     isMarkingAsFailed,
     shortDateFormat,
     timeFormat,
@@ -59,6 +60,7 @@ function HistoryDetailsModal(props) {
             eventType={eventType}
             sourceTitle={sourceTitle}
             data={data}
+            downloadId={downloadId}
             shortDateFormat={shortDateFormat}
             timeFormat={timeFormat}
           />
@@ -73,7 +75,7 @@ function HistoryDetailsModal(props) {
                 isSpinning={isMarkingAsFailed}
                 onPress={onMarkAsFailedPress}
               >
-                Mark as Failed
+                {translate('MarkAsFailed')}
               </SpinnerButton>
           }
 
@@ -93,6 +95,7 @@ HistoryDetailsModal.propTypes = {
   eventType: PropTypes.string.isRequired,
   sourceTitle: PropTypes.string.isRequired,
   data: PropTypes.object.isRequired,
+  downloadId: PropTypes.string,
   isMarkingAsFailed: PropTypes.bool.isRequired,
   shortDateFormat: PropTypes.string.isRequired,
   timeFormat: PropTypes.string.isRequired,

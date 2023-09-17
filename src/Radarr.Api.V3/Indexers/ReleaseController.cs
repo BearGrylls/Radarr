@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
 using NzbDrone.Common.Cache;
+using NzbDrone.Common.EnsureThat;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Exceptions;
@@ -11,7 +14,7 @@ using NzbDrone.Core.Indexers;
 using NzbDrone.Core.IndexerSearch;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Parser.Model;
-using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Validation;
 using Radarr.Http;
 using HttpStatusCode = System.Net.HttpStatusCode;
@@ -38,7 +41,7 @@ namespace Radarr.Api.V3.Indexers
                              IDownloadService downloadService,
                              IMovieService movieService,
                              ICacheManager cacheManager,
-                             IProfileService qualityProfileService,
+                             IQualityProfileService qualityProfileService,
                              Logger logger)
             : base(qualityProfileService)
         {
@@ -57,7 +60,8 @@ namespace Radarr.Api.V3.Indexers
         }
 
         [HttpPost]
-        public object DownloadRelease(ReleaseResource release)
+        [Consumes("application/json")]
+        public async Task<object> DownloadRelease(ReleaseResource release)
         {
             var remoteMovie = _remoteMovieCache.Find(GetCacheKey(release));
 
@@ -70,6 +74,30 @@ namespace Radarr.Api.V3.Indexers
 
             try
             {
+                if (release.ShouldOverride == true)
+                {
+                    Ensure.That(release.MovieId, () => release.MovieId).IsNotNull();
+                    Ensure.That(release.Quality, () => release.Quality).IsNotNull();
+                    Ensure.That(release.Languages, () => release.Languages).IsNotNull();
+
+                    // Clone the remote episode so we don't overwrite anything on the original
+                    remoteMovie = new RemoteMovie
+                    {
+                        Release = remoteMovie.Release,
+                        ParsedMovieInfo = remoteMovie.ParsedMovieInfo.JsonClone(),
+                        DownloadAllowed = remoteMovie.DownloadAllowed,
+                        SeedConfiguration = remoteMovie.SeedConfiguration,
+                        CustomFormats = remoteMovie.CustomFormats,
+                        CustomFormatScore = remoteMovie.CustomFormatScore,
+                        MovieMatchType = remoteMovie.MovieMatchType,
+                        ReleaseSource = remoteMovie.ReleaseSource
+                    };
+
+                    remoteMovie.Movie = _movieService.GetMovie(release.MovieId!.Value);
+                    remoteMovie.ParsedMovieInfo.Quality = release.Quality;
+                    remoteMovie.Languages = release.Languages;
+                }
+
                 if (remoteMovie.Movie == null)
                 {
                     if (release.MovieId.HasValue)
@@ -84,7 +112,7 @@ namespace Radarr.Api.V3.Indexers
                     }
                 }
 
-                _downloadService.DownloadReport(remoteMovie);
+                await _downloadService.DownloadReport(remoteMovie, release.DownloadClientId);
             }
             catch (ReleaseDownloadException ex)
             {
@@ -96,21 +124,22 @@ namespace Radarr.Api.V3.Indexers
         }
 
         [HttpGet]
-        public List<ReleaseResource> GetReleases(int? movieId)
+        [Produces("application/json")]
+        public async Task<List<ReleaseResource>> GetReleases(int? movieId)
         {
             if (movieId.HasValue)
             {
-                return GetMovieReleases(movieId.Value);
+                return await GetMovieReleases(movieId.Value);
             }
 
-            return GetRss();
+            return await GetRss();
         }
 
-        private List<ReleaseResource> GetMovieReleases(int movieId)
+        private async Task<List<ReleaseResource>> GetMovieReleases(int movieId)
         {
             try
             {
-                var decisions = _releaseSearchService.MovieSearch(movieId, true, true);
+                var decisions = await _releaseSearchService.MovieSearch(movieId, true, true);
                 var prioritizedDecisions = _prioritizeDownloadDecision.PrioritizeDecisionsForMovies(decisions);
 
                 return MapDecisions(prioritizedDecisions);
@@ -126,9 +155,9 @@ namespace Radarr.Api.V3.Indexers
             }
         }
 
-        private List<ReleaseResource> GetRss()
+        private async Task<List<ReleaseResource>> GetRss()
         {
-            var reports = _rssFetcherAndParser.Fetch();
+            var reports = await _rssFetcherAndParser.Fetch();
             var decisions = _downloadDecisionMaker.GetRssDecision(reports);
             var prioritizedDecisions = _prioritizeDownloadDecision.PrioritizeDecisionsForMovies(decisions);
 

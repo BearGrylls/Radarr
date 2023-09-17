@@ -11,7 +11,7 @@ using NzbDrone.Core.Download.Pending;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.Messaging.Events;
-using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.Queue;
 using NzbDrone.SignalR;
@@ -39,7 +39,7 @@ namespace Radarr.Api.V3.Queue
         public QueueController(IBroadcastSignalRMessage broadcastSignalRMessage,
                            IQueueService queueService,
                            IPendingReleaseService pendingReleaseService,
-                           ProfileService qualityProfileService,
+                           QualityProfileService qualityProfileService,
                            ITrackedDownloadService trackedDownloadService,
                            IFailedDownloadService failedDownloadService,
                            IIgnoredDownloadService ignoredDownloadService,
@@ -58,35 +58,69 @@ namespace Radarr.Api.V3.Queue
             _qualityComparer = new QualityModelComparer(qualityProfileService.GetDefaultProfile(string.Empty));
         }
 
+        [NonAction]
         protected override QueueResource GetResourceById(int id)
         {
             throw new NotImplementedException();
         }
 
         [RestDeleteById]
-        public void RemoveAction(int id, bool removeFromClient = true, bool blocklist = false)
+        public void RemoveAction(int id, bool removeFromClient = true, bool blocklist = false, bool skipRedownload = false)
         {
-            var trackedDownload = Remove(id, removeFromClient, blocklist);
+            var pendingRelease = _pendingReleaseService.FindPendingQueueItem(id);
 
-            if (trackedDownload != null)
+            if (pendingRelease != null)
             {
-                _trackedDownloadService.StopTracking(trackedDownload.DownloadItem.DownloadId);
+                Remove(pendingRelease);
+
+                return;
             }
+
+            var trackedDownload = GetTrackedDownload(id);
+
+            if (trackedDownload == null)
+            {
+                throw new NotFoundException();
+            }
+
+            Remove(trackedDownload, removeFromClient, blocklist, skipRedownload);
+            _trackedDownloadService.StopTracking(trackedDownload.DownloadItem.DownloadId);
         }
 
         [HttpDelete("bulk")]
-        public object RemoveMany([FromBody] QueueBulkResource resource, [FromQuery] bool removeFromClient = true, [FromQuery] bool blocklist = false)
+        public object RemoveMany([FromBody] QueueBulkResource resource, [FromQuery] bool removeFromClient = true, [FromQuery] bool blocklist = false, [FromQuery] bool skipRedownload = false)
         {
             var trackedDownloadIds = new List<string>();
+            var pendingToRemove = new List<NzbDrone.Core.Queue.Queue>();
+            var trackedToRemove = new List<TrackedDownload>();
 
             foreach (var id in resource.Ids)
             {
-                var trackedDownload = Remove(id, removeFromClient, blocklist);
+                var pendingRelease = _pendingReleaseService.FindPendingQueueItem(id);
+
+                if (pendingRelease != null)
+                {
+                    pendingToRemove.Add(pendingRelease);
+                    continue;
+                }
+
+                var trackedDownload = GetTrackedDownload(id);
 
                 if (trackedDownload != null)
                 {
-                    trackedDownloadIds.Add(trackedDownload.DownloadItem.DownloadId);
+                    trackedToRemove.Add(trackedDownload);
                 }
+            }
+
+            foreach (var pendingRelease in pendingToRemove.DistinctBy(p => p.Id))
+            {
+                Remove(pendingRelease);
+            }
+
+            foreach (var trackedDownload in trackedToRemove.DistinctBy(t => t.DownloadItem.DownloadId))
+            {
+                Remove(trackedDownload, removeFromClient, blocklist, skipRedownload);
+                trackedDownloadIds.Add(trackedDownload.DownloadItem.DownloadId);
             }
 
             _trackedDownloadService.StopTracking(trackedDownloadIds);
@@ -186,10 +220,14 @@ namespace Radarr.Api.V3.Queue
                     return q => q.Movie?.MovieMetadata.Value.SortTitle ?? q.Title;
                 case "title":
                     return q => q.Title;
+                case "year":
+                    return q => q.Movie?.Year ?? 0;
                 case "languages":
                     return q => q.Languages;
                 case "quality":
                     return q => q.Quality;
+                case "size":
+                    return q => q.Size;
                 case "progress":
                     // Avoid exploding if a download's size is 0
                     return q => 100 - (q.Sizeleft / Math.Max(q.Size * 100, 1));
@@ -198,29 +236,14 @@ namespace Radarr.Api.V3.Queue
             }
         }
 
-        private TrackedDownload Remove(int id, bool removeFromClient, bool blocklist)
+        private void Remove(NzbDrone.Core.Queue.Queue pendingRelease)
         {
-            var pendingRelease = _pendingReleaseService.FindPendingQueueItem(id);
+            _blocklistService.Block(pendingRelease.RemoteMovie, "Pending release manually blocklisted");
+            _pendingReleaseService.RemovePendingQueueItems(pendingRelease.Id);
+        }
 
-            if (pendingRelease != null)
-            {
-                if (blocklist)
-                {
-                    _blocklistService.Block(pendingRelease.RemoteMovie, "Pending release manually blocklisted");
-                }
-
-                _pendingReleaseService.RemovePendingQueueItems(pendingRelease.Id);
-
-                return null;
-            }
-
-            var trackedDownload = GetTrackedDownload(id);
-
-            if (trackedDownload == null)
-            {
-                throw new NotFoundException();
-            }
-
+        private TrackedDownload Remove(TrackedDownload trackedDownload, bool removeFromClient, bool blocklist, bool skipRedownload)
+        {
             if (removeFromClient)
             {
                 var downloadClient = _downloadClientProvider.Get(trackedDownload.DownloadClient);
@@ -235,7 +258,7 @@ namespace Radarr.Api.V3.Queue
 
             if (blocklist)
             {
-                _failedDownloadService.MarkAsFailed(trackedDownload.DownloadItem.DownloadId);
+                _failedDownloadService.MarkAsFailed(trackedDownload.DownloadItem.DownloadId, skipRedownload);
             }
 
             if (!removeFromClient && !blocklist)

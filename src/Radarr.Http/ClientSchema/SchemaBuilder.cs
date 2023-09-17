@@ -13,6 +13,7 @@ namespace Radarr.Http.ClientSchema
 {
     public static class SchemaBuilder
     {
+        private const string PRIVATE_VALUE = "********";
         private static Dictionary<Type, FieldMapping[]> _mappings = new Dictionary<Type, FieldMapping[]>();
 
         public static List<Field> ToSchema(object model)
@@ -28,13 +29,19 @@ namespace Radarr.Http.ClientSchema
                 var field = mapping.Field.Clone();
                 field.Value = mapping.GetterFunc(model);
 
+                if (field.Value != null && !field.Value.Equals(string.Empty) &&
+                    (field.Privacy == PrivacyLevel.ApiKey || field.Privacy == PrivacyLevel.Password))
+                {
+                    field.Value = PRIVATE_VALUE;
+                }
+
                 result.Add(field);
             }
 
             return result.OrderBy(r => r.Order).ToList();
         }
 
-        public static object ReadFromSchema(List<Field> fields, Type targetType)
+        public static object ReadFromSchema(List<Field> fields, Type targetType, object model)
         {
             Ensure.That(targetType, () => targetType).IsNotNull();
 
@@ -49,16 +56,23 @@ namespace Radarr.Http.ClientSchema
 
                 if (field != null)
                 {
-                    mapping.SetterFunc(target, field.Value);
+                    // Use the Privacy property from the mapping's field as Privacy may not be set in the API request (nor is it required)
+                    if ((mapping.Field.Privacy == PrivacyLevel.ApiKey || mapping.Field.Privacy == PrivacyLevel.Password) &&
+                        (field.Value?.ToString()?.Equals(PRIVATE_VALUE) ?? false) &&
+                        model != null)
+                    {
+                        var existingValue = mapping.GetterFunc(model);
+
+                        mapping.SetterFunc(target, existingValue);
+                    }
+                    else
+                    {
+                        mapping.SetterFunc(target, field.Value);
+                    }
                 }
             }
 
             return target;
-        }
-
-        public static T ReadFromSchema<T>(List<Field> fields)
-        {
-            return (T)ReadFromSchema(fields, typeof(T));
         }
 
         // Ideally this function should begin a System.Linq.Expression expression tree since it's faster.
@@ -67,13 +81,12 @@ namespace Radarr.Http.ClientSchema
         {
             lock (_mappings)
             {
-                FieldMapping[] result;
-                if (!_mappings.TryGetValue(type, out result))
+                if (!_mappings.TryGetValue(type, out var result))
                 {
                     result = GetFieldMapping(type, "", v => v);
 
                     // Renumber al the field Orders since nested settings will have dupe Orders.
-                    for (int i = 0; i < result.Length; i++)
+                    for (var i = 0; i < result.Length; i++)
                     {
                         result[i].Field.Order = i;
                     }
@@ -100,15 +113,17 @@ namespace Radarr.Http.ClientSchema
                         Label = fieldAttribute.Label,
                         Unit = fieldAttribute.Unit,
                         HelpText = fieldAttribute.HelpText,
+                        HelpTextWarning = fieldAttribute.HelpTextWarning,
                         HelpLink = fieldAttribute.HelpLink,
                         Order = fieldAttribute.Order,
                         Advanced = fieldAttribute.Advanced,
                         Type = fieldAttribute.Type.ToString().FirstCharToLower(),
                         Section = fieldAttribute.Section,
+                        Privacy = fieldAttribute.Privacy,
                         Placeholder = fieldAttribute.Placeholder
                     };
 
-                    if (fieldAttribute.Type == FieldType.Select || fieldAttribute.Type == FieldType.TagSelect)
+                    if (fieldAttribute.Type is FieldType.Select or FieldType.TagSelect)
                     {
                         if (fieldAttribute.SelectOptionsProviderAction.IsNotNullOrWhiteSpace())
                         {
@@ -125,6 +140,11 @@ namespace Radarr.Http.ClientSchema
                         field.Hidden = fieldAttribute.Hidden.ToString().FirstCharToLower();
                     }
 
+                    if (fieldAttribute.Type is FieldType.Number && propertyInfo.PropertyType == typeof(double))
+                    {
+                        field.IsFloat = true;
+                    }
+
                     var valueConverter = GetValueConverter(propertyInfo.PropertyType);
 
                     result.Add(new FieldMapping
@@ -132,7 +152,7 @@ namespace Radarr.Http.ClientSchema
                         Field = field,
                         PropertyType = propertyInfo.PropertyType,
                         GetterFunc = t => propertyInfo.GetValue(targetSelector(t), null),
-                        SetterFunc = (t, v) => propertyInfo.SetValue(targetSelector(t), valueConverter(v), null)
+                        SetterFunc = (t, v) => propertyInfo.SetValue(targetSelector(t), v?.GetType() == propertyInfo.PropertyType ? v : valueConverter(v), null)
                     });
                 }
                 else
@@ -157,31 +177,33 @@ namespace Radarr.Http.ClientSchema
         {
             if (selectOptions.IsEnum)
             {
-                var options = selectOptions.GetFields().Where(v => v.IsStatic).Select(v =>
-                {
-                    var name = v.Name.Replace('_', ' ');
-                    var value = Convert.ToInt32(v.GetRawConstantValue());
-                    var attrib = v.GetCustomAttribute<FieldOptionAttribute>();
-                    if (attrib != null)
+                var options = selectOptions
+                    .GetFields()
+                    .Where(v => v.IsStatic && !v.GetCustomAttributes(false).OfType<ObsoleteAttribute>().Any())
+                    .Select(v =>
                     {
-                        return new SelectOption
+                        var name = v.Name.Replace('_', ' ');
+                        var value = Convert.ToInt32(v.GetRawConstantValue());
+                        var attrib = v.GetCustomAttribute<FieldOptionAttribute>();
+
+                        if (attrib != null)
                         {
-                            Value = value,
-                            Name = attrib.Label ?? name,
-                            Order = attrib.Order,
-                            Hint = attrib.Hint ?? $"({value})"
-                        };
-                    }
-                    else
-                    {
+                            return new SelectOption
+                            {
+                                Value = value,
+                                Name = attrib.Label ?? name,
+                                Order = attrib.Order,
+                                Hint = attrib.Hint ?? $"({value})"
+                            };
+                        }
+
                         return new SelectOption
                         {
                             Value = value,
                             Name = name,
                             Order = value
                         };
-                    }
-                });
+                    });
 
                 return options.OrderBy(o => o.Order).ToList();
             }
@@ -253,7 +275,7 @@ namespace Radarr.Http.ClientSchema
                     }
                     else
                     {
-                        return fieldValue.ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim());
+                        return fieldValue.ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(v => v.Trim());
                     }
                 };
             }
