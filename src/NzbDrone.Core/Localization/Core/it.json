@@ -415,7 +415,6 @@
     "RegularExpressionsCanBeTested": "Le espressioni regolari possono essere testate ",
     "RefreshMovie": "Aggiorna il Film",
     "RefreshInformationAndScanDisk": "Aggiorna le informazioni e scansiona il disco",
-    "Redownload": "Riscarica",
     "RecyclingBinCleanup": "Pulizia del cestino",
     "RecyclingBin": "Cestino",
     "RecycleBinHelpText": "I file dei film andranno qui quando cancellati invece che venire eliminati definitivamente",
@@ -1079,5 +1078,6 @@
     "ApplyChanges": "Applica Cambiamenti",
     "AutomaticAdd": "Aggiungi Automaticamente",
     "AllTitles": "Tutti i Titoli",
-    "ApiKeyValidationHealthCheckMessage": "Aggiorna la tua chiave API in modo che abbia una lunghezza di almeno {0} caratteri. Puoi farlo dalle impostazioni o dal file di configurazione"
+    "ApiKeyValidationHealthCheckMessage": "Aggiorna la tua chiave API in modo che abbia una lunghezza di almeno {0} caratteri. Puoi farlo dalle impostazioni o dal file di configurazione",
+    "AddImportList": "Aggiungi lista da importare"
 }
