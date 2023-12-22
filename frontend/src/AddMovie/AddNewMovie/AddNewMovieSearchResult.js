@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Icon from 'Components/Icon';
+import ImdbRating from 'Components/ImdbRating';
 import Label from 'Components/Label';
 import Link from 'Components/Link/Link';
 import TmdbRating from 'Components/TmdbRating';
@@ -61,11 +62,13 @@ class AddNewMovieSearchResult extends Component {
       titleSlug,
       year,
       studio,
+      genres,
       status,
       overview,
       ratings,
       folder,
       images,
+      existingMovieId,
       isExistingMovie,
       isExclusionMovie,
       isSmallScreen,
@@ -74,8 +77,8 @@ class AddNewMovieSearchResult extends Component {
       monitored,
       hasFile,
       isAvailable,
-      queueStatus,
-      queueState,
+      movieFile,
+      queueItem,
       runtime,
       movieRuntimeFormat,
       certification
@@ -120,13 +123,13 @@ class AddNewMovieSearchResult extends Component {
                 {
                   isExistingMovie &&
                     <MovieIndexProgressBar
+                      movieId={existingMovieId}
+                      movieFile={movieFile}
                       monitored={monitored}
                       hasFile={hasFile}
                       status={status}
                       width={posterWidth}
                       detailedProgressBar={true}
-                      queueStatus={queueStatus}
-                      queueState={queueState}
                       isAvailable={isAvailable}
                     />
                 }
@@ -198,10 +201,43 @@ class AddNewMovieSearchResult extends Component {
               </Label>
 
               {
+                ratings.imdb ?
+                  <Label size={sizes.LARGE}>
+                    <ImdbRating
+                      ratings={ratings}
+                      iconSize={13}
+                    />
+                  </Label> :
+                  null
+              }
+
+              {
                 !!studio &&
                   <Label size={sizes.LARGE}>
-                    {studio}
+                    <Icon
+                      name={icons.STUDIO}
+                      size={13}
+                    />
+
+                    <span className={styles.studio}>
+                      {studio}
+                    </span>
                   </Label>
+              }
+
+              {
+                genres.length > 0 ?
+                  <Label size={sizes.LARGE}>
+                    <Icon
+                      name={icons.GENRE}
+                      size={13}
+                    />
+
+                    <span className={styles.genres}>
+                      {genres.slice(0, 3).join(', ')}
+                    </span>
+                  </Label> :
+                  null
               }
 
               <Tooltip
@@ -215,15 +251,15 @@ class AddNewMovieSearchResult extends Component {
                     />
 
                     <span className={styles.links}>
-                      Links
+                      {translate('Links')}
                     </span>
                   </Label>
                 }
                 tooltip={
                   <MovieDetailsLinks
                     tmdbId={tmdbId}
-                    youTubeTrailerId={youTubeTrailerId}
                     imdbId={imdbId}
+                    youTubeTrailerId={youTubeTrailerId}
                   />
                 }
                 canFlip={true}
@@ -237,6 +273,7 @@ class AddNewMovieSearchResult extends Component {
                     hasMovieFiles={hasFile}
                     monitored={monitored}
                     isAvailable={isAvailable}
+                    queueItem={queueItem}
                     id={id}
                     useLabel={true}
                     colorImpairedMode={colorImpairedMode}
@@ -273,25 +310,30 @@ AddNewMovieSearchResult.propTypes = {
   titleSlug: PropTypes.string.isRequired,
   year: PropTypes.number.isRequired,
   studio: PropTypes.string,
+  genres: PropTypes.arrayOf(PropTypes.string),
   status: PropTypes.string.isRequired,
   overview: PropTypes.string,
   ratings: PropTypes.object.isRequired,
   folder: PropTypes.string.isRequired,
   images: PropTypes.arrayOf(PropTypes.object).isRequired,
+  existingMovieId: PropTypes.number,
   isExistingMovie: PropTypes.bool.isRequired,
   isExclusionMovie: PropTypes.bool.isRequired,
   isSmallScreen: PropTypes.bool.isRequired,
   id: PropTypes.number,
-  queueItems: PropTypes.arrayOf(PropTypes.object),
   monitored: PropTypes.bool.isRequired,
   hasFile: PropTypes.bool.isRequired,
   isAvailable: PropTypes.bool.isRequired,
+  movieFile: PropTypes.object,
+  queueItem: PropTypes.object,
   colorImpairedMode: PropTypes.bool,
-  queueStatus: PropTypes.string,
-  queueState: PropTypes.string,
   runtime: PropTypes.number.isRequired,
   movieRuntimeFormat: PropTypes.string.isRequired,
   certification: PropTypes.string
+};
+
+AddNewMovieSearchResult.defaultProps = {
+  genres: []
 };
 
 export default AddNewMovieSearchResult;

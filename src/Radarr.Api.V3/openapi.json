@@ -9849,6 +9849,10 @@
             "type": "string",
             "nullable": true
           },
+          "passwordConfirmation": {
+            "type": "string",
+            "nullable": true
+          },
           "logLevel": {
             "type": "string",
             "nullable": true
@@ -10074,6 +10078,10 @@
           "applyTags": {
             "$ref": "#/components/schemas/ApplyTags"
           },
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
           "enableAuto": {
             "type": "boolean",
             "nullable": true
@@ -10086,6 +10094,9 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "minimumAvailability": {
+            "$ref": "#/components/schemas/MovieStatusType"
           }
         },
         "additionalProperties": false
@@ -12564,6 +12575,10 @@
           "downloadClientId": {
             "type": "integer",
             "format": "int32",
+            "nullable": true
+          },
+          "downloadClient": {
+            "type": "string",
             "nullable": true
           },
           "shouldOverride": {

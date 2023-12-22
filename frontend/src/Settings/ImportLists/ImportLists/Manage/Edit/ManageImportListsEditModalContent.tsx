@@ -12,8 +12,10 @@ import translate from 'Utilities/String/translate';
 import styles from './ManageImportListsEditModalContent.css';
 
 interface SavePayload {
+  enabled?: boolean;
   enableAuto?: boolean;
   qualityProfileId?: number;
+  minimumAvailability?: string;
   rootFolderPath?: string;
 }
 
@@ -25,7 +27,7 @@ interface ManageImportListsEditModalContentProps {
 
 const NO_CHANGE = 'noChange';
 
-const autoAddOptions = [
+const enableOptions = [
   {
     key: NO_CHANGE,
     get value() {
@@ -52,15 +54,22 @@ function ManageImportListsEditModalContent(
 ) {
   const { importListIds, onSavePress, onModalClose } = props;
 
+  const [enabled, setEnabled] = useState(NO_CHANGE);
   const [enableAuto, setEnableAuto] = useState(NO_CHANGE);
   const [qualityProfileId, setQualityProfileId] = useState<string | number>(
     NO_CHANGE
   );
+  const [minimumAvailability, setMinimumAvailability] = useState(NO_CHANGE);
   const [rootFolderPath, setRootFolderPath] = useState(NO_CHANGE);
 
   const save = useCallback(() => {
     let hasChanges = false;
     const payload: SavePayload = {};
+
+    if (enabled !== NO_CHANGE) {
+      hasChanges = true;
+      payload.enabled = enabled === 'enabled';
+    }
 
     if (enableAuto !== NO_CHANGE) {
       hasChanges = true;
@@ -70,6 +79,11 @@ function ManageImportListsEditModalContent(
     if (qualityProfileId !== NO_CHANGE) {
       hasChanges = true;
       payload.qualityProfileId = qualityProfileId as number;
+    }
+
+    if (minimumAvailability !== NO_CHANGE) {
+      hasChanges = true;
+      payload.minimumAvailability = minimumAvailability as string;
     }
 
     if (rootFolderPath !== NO_CHANGE) {
@@ -82,16 +96,30 @@ function ManageImportListsEditModalContent(
     }
 
     onModalClose();
-  }, [enableAuto, qualityProfileId, rootFolderPath, onSavePress, onModalClose]);
+  }, [
+    enabled,
+    enableAuto,
+    qualityProfileId,
+    minimumAvailability,
+    rootFolderPath,
+    onSavePress,
+    onModalClose,
+  ]);
 
   const onInputChange = useCallback(
     ({ name, value }: { name: string; value: string }) => {
       switch (name) {
+        case 'enabled':
+          setEnabled(value);
+          break;
         case 'enableAuto':
           setEnableAuto(value);
           break;
         case 'qualityProfileId':
           setQualityProfileId(value);
+          break;
+        case 'minimumAvailability':
+          setMinimumAvailability(value);
           break;
         case 'rootFolderPath':
           setRootFolderPath(value);
@@ -111,13 +139,25 @@ function ManageImportListsEditModalContent(
 
       <ModalBody>
         <FormGroup>
+          <FormLabel>{translate('Enabled')}</FormLabel>
+
+          <FormInputGroup
+            type={inputTypes.SELECT}
+            name="enabled"
+            value={enabled}
+            values={enableOptions}
+            onChange={onInputChange}
+          />
+        </FormGroup>
+
+        <FormGroup>
           <FormLabel>{translate('AutomaticAdd')}</FormLabel>
 
           <FormInputGroup
             type={inputTypes.SELECT}
             name="enableAuto"
             value={enableAuto}
-            values={autoAddOptions}
+            values={enableOptions}
             onChange={onInputChange}
           />
         </FormGroup>
@@ -129,6 +169,19 @@ function ManageImportListsEditModalContent(
             type={inputTypes.QUALITY_PROFILE_SELECT}
             name="qualityProfileId"
             value={qualityProfileId}
+            includeNoChange={true}
+            includeNoChangeDisabled={false}
+            onChange={onInputChange}
+          />
+        </FormGroup>
+
+        <FormGroup>
+          <FormLabel>{translate('MinimumAvailability')}</FormLabel>
+
+          <FormInputGroup
+            type={inputTypes.AVAILABILITY_SELECT}
+            name="minimumAvailability"
+            value={minimumAvailability}
             includeNoChange={true}
             includeNoChangeDisabled={false}
             onChange={onInputChange}

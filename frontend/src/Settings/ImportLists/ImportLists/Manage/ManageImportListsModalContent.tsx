@@ -53,8 +53,20 @@ const COLUMNS = [
     isVisible: true,
   },
   {
+    name: 'minimumAvailability',
+    label: () => translate('MinimumAvailability'),
+    isSortable: true,
+    isVisible: true,
+  },
+  {
     name: 'rootFolderPath',
     label: () => translate('RootFolder'),
+    isSortable: true,
+    isVisible: true,
+  },
+  {
+    name: 'enabled',
+    label: () => translate('Enabled'),
     isSortable: true,
     isVisible: true,
   },
