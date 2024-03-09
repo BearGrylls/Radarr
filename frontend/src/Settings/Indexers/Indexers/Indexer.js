@@ -42,7 +42,7 @@ class Indexer extends Component {
     });
   };
 
-  onDeleteIndexerModalClose= () => {
+  onDeleteIndexerModalClose = () => {
     this.setState({ isDeleteIndexerModalOpen: false });
   };
 
@@ -101,7 +101,7 @@ class Indexer extends Component {
           {
             supportsRss && enableRss &&
               <Label kind={kinds.SUCCESS}>
-                {translate('RSS')}
+                {translate('Rss')}
               </Label>
           }
 

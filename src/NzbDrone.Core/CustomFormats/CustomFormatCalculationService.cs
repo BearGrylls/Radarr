@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Blocklisting;
 using NzbDrone.Core.History;
@@ -25,10 +26,12 @@ namespace NzbDrone.Core.CustomFormats
     public class CustomFormatCalculationService : ICustomFormatCalculationService
     {
         private readonly ICustomFormatService _formatService;
+        private readonly Logger _logger;
 
-        public CustomFormatCalculationService(ICustomFormatService formatService)
+        public CustomFormatCalculationService(ICustomFormatService formatService, Logger logger)
         {
             _formatService = formatService;
+            _logger = logger;
         }
 
         public List<CustomFormat> ParseCustomFormat(RemoteMovie remoteMovie, long size)
@@ -75,8 +78,8 @@ namespace NzbDrone.Core.CustomFormats
                 MovieInfo = movieInfo,
                 Movie = movie,
                 Size = blocklist.Size ?? 0,
-                IndexerFlags = blocklist.IndexerFlags,
-                Languages = blocklist.Languages
+                Languages = blocklist.Languages,
+                IndexerFlags = blocklist.IndexerFlags
             };
 
             return ParseCustomFormat(input);
@@ -87,7 +90,7 @@ namespace NzbDrone.Core.CustomFormats
             var parsed = Parser.Parser.ParseMovieTitle(history.SourceTitle);
 
             long.TryParse(history.Data.GetValueOrDefault("size"), out var size);
-            Enum.TryParse(history.Data.GetValueOrDefault("indexerFlags"), true, out IndexerFlags flags);
+            Enum.TryParse(history.Data.GetValueOrDefault("indexerFlags"), true, out IndexerFlags indexerFlags);
 
             var movieInfo = new ParsedMovieInfo
             {
@@ -105,8 +108,8 @@ namespace NzbDrone.Core.CustomFormats
                 MovieInfo = movieInfo,
                 Movie = movie,
                 Size = size,
-                IndexerFlags = flags,
-                Languages = history.Languages
+                Languages = history.Languages,
+                IndexerFlags = indexerFlags
             };
 
             return ParseCustomFormat(input);
@@ -114,7 +117,7 @@ namespace NzbDrone.Core.CustomFormats
 
         public List<CustomFormat> ParseCustomFormat(LocalMovie localMovie)
         {
-            var episodeInfo = new ParsedMovieInfo
+            var movieInfo = new ParsedMovieInfo
             {
                 MovieTitles = new List<string>() { localMovie.Movie.Title },
                 SimpleReleaseTitle = localMovie.SceneName.IsNotNullOrWhiteSpace() ? localMovie.SceneName.SimplifyReleaseTitle() : Path.GetFileName(localMovie.Path).SimplifyReleaseTitle(),
@@ -127,10 +130,11 @@ namespace NzbDrone.Core.CustomFormats
 
             var input = new CustomFormatInput
             {
-                MovieInfo = episodeInfo,
+                MovieInfo = movieInfo,
                 Movie = localMovie.Movie,
                 Size = localMovie.Size,
                 Languages = localMovie.Languages,
+                IndexerFlags = localMovie.IndexerFlags,
                 Filename = Path.GetFileName(localMovie.Path)
             };
 
@@ -165,20 +169,23 @@ namespace NzbDrone.Core.CustomFormats
             return matches.OrderBy(x => x.Name).ToList();
         }
 
-        private static List<CustomFormat> ParseCustomFormat(MovieFile movieFile, Movie movie, List<CustomFormat> allCustomFormats)
+        private List<CustomFormat> ParseCustomFormat(MovieFile movieFile, Movie movie, List<CustomFormat> allCustomFormats)
         {
             var releaseTitle = string.Empty;
 
             if (movieFile.SceneName.IsNotNullOrWhiteSpace())
             {
+                _logger.Trace("Using scene name for release title: {0}", movieFile.SceneName);
                 releaseTitle = movieFile.SceneName;
             }
             else if (movieFile.OriginalFilePath.IsNotNullOrWhiteSpace())
             {
+                _logger.Trace("Using original file path for release title: {0}", Path.GetFileName(movieFile.OriginalFilePath));
                 releaseTitle = Path.GetFileName(movieFile.OriginalFilePath);
             }
             else if (movieFile.RelativePath.IsNotNullOrWhiteSpace())
             {
+                _logger.Trace("Using relative path for release title: {0}", Path.GetFileName(movieFile.RelativePath));
                 releaseTitle = Path.GetFileName(movieFile.RelativePath);
             }
 
@@ -197,8 +204,8 @@ namespace NzbDrone.Core.CustomFormats
                 MovieInfo = movieInfo,
                 Movie = movie,
                 Size = movieFile.Size,
-                IndexerFlags = movieFile.IndexerFlags,
                 Languages = movieFile.Languages,
+                IndexerFlags = movieFile.IndexerFlags,
                 Filename = Path.GetFileName(movieFile.RelativePath)
             };
 

@@ -45,7 +45,8 @@
   width: 165px;
 }
 
-.releaseGroup {
+.releaseGroup,
+.dateAdded {
   composes: cell from '~Components/Table/Cells/TableRowCell.css';
 
   width: 120px;
@@ -55,4 +56,10 @@
   composes: cell from '~Components/Table/Cells/TableRowCell.css';
 
   width: 55px;
+}
+
+.indexerFlags {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  width: 50px;
 }

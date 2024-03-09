@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentValidation.Results;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.Localization;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Notifications.Discord.Payloads;
+using NzbDrone.Core.Tags;
 using NzbDrone.Core.Validation;
 
 namespace NzbDrone.Core.Notifications.Discord
@@ -15,10 +17,14 @@ namespace NzbDrone.Core.Notifications.Discord
     public class Discord : NotificationBase<DiscordSettings>
     {
         private readonly IDiscordProxy _proxy;
+        private readonly ITagRepository _tagRepository;
+        private readonly ILocalizationService _localizationService;
 
-        public Discord(IDiscordProxy proxy)
+        public Discord(IDiscordProxy proxy, ITagRepository tagRepository, ILocalizationService localizationService)
         {
             _proxy = proxy;
+            _tagRepository = tagRepository;
+            _localizationService = localizationService;
         }
 
         public override string Name => "Discord";
@@ -109,6 +115,10 @@ namespace NzbDrone.Core.Notifications.Discord
                     case DiscordGrabFieldType.Indexer:
                         discordField.Name = "Indexer";
                         discordField.Value = message.RemoteMovie.Release.Indexer;
+                        break;
+                    case DiscordGrabFieldType.Tags:
+                        discordField.Name = "Tags";
+                        discordField.Value = GetTagLabels(message.Movie)?.Join(", ") ?? string.Empty;
                         break;
                 }
 
@@ -213,6 +223,10 @@ namespace NzbDrone.Core.Notifications.Discord
                     case DiscordImportFieldType.Links:
                         discordField.Name = "Links";
                         discordField.Value = GetLinksString(message.Movie);
+                        break;
+                    case DiscordImportFieldType.Tags:
+                        discordField.Name = "Tags";
+                        discordField.Value = GetTagLabels(message.Movie)?.Join(", ") ?? string.Empty;
                         break;
                 }
 
@@ -499,6 +513,10 @@ namespace NzbDrone.Core.Notifications.Discord
                         discordField.Name = "Links";
                         discordField.Value = GetLinksString(message.Movie);
                         break;
+                    case DiscordManualInteractionFieldType.Tags:
+                        discordField.Name = "Tags";
+                        discordField.Value = GetTagLabels(message.Movie)?.Join(", ") ?? string.Empty;
+                        break;
                 }
 
                 if (discordField.Name.IsNotNullOrWhiteSpace() && discordField.Value.IsNotNullOrWhiteSpace())
@@ -532,7 +550,7 @@ namespace NzbDrone.Core.Notifications.Discord
             }
             catch (DiscordException ex)
             {
-                return new NzbDroneValidationFailure("Unable to post", ex.Message);
+                return new NzbDroneValidationFailure(string.Empty, _localizationService.GetLocalizedString("NotificationsValidationUnableToSendTestMessage", new Dictionary<string, object> { { "exceptionMessage", ex.Message } }));
             }
 
             return null;
@@ -603,6 +621,15 @@ namespace NzbDrone.Core.Notifications.Discord
             var title = movie.MovieMetadata.Value.Year > 0 ? $"{movie.MovieMetadata.Value.Title} ({movie.MovieMetadata.Value.Year})" : movie.MovieMetadata.Value.Title;
 
             return title.Length > 256 ? $"{title.AsSpan(0, 253)}..." : title;
+        }
+
+        private IEnumerable<string> GetTagLabels(Movie movie)
+        {
+            return movie.Tags?
+                .Select(t => _tagRepository.Find(t)?.Label)
+                .Where(l => l.IsNotNullOrWhiteSpace())
+                .OrderBy(l => l)
+                .Take(5);
         }
     }
 }

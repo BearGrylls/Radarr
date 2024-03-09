@@ -90,8 +90,8 @@ interface InteractiveSearchRowProps {
   customFormats: CustomFormat[];
   customFormatScore: number;
   mappedMovieId?: number;
-  rejections: string[];
   indexerFlags: string[];
+  rejections: string[];
   downloadAllowed: boolean;
   isGrabbing: boolean;
   isGrabbed: boolean;
@@ -125,8 +125,8 @@ function InteractiveSearchRow(props: InteractiveSearchRowProps) {
     customFormatScore,
     customFormats,
     mappedMovieId,
-    rejections = [],
     indexerFlags = [],
+    rejections = [],
     downloadAllowed,
     isGrabbing = false,
     isGrabbed = false,
@@ -266,7 +266,7 @@ function InteractiveSearchRow(props: InteractiveSearchRowProps) {
       </TableRowCell>
 
       <TableRowCell className={styles.quality}>
-        <MovieQuality quality={quality} />
+        <MovieQuality quality={quality} showRevision={true} />
       </TableRowCell>
 
       <TableRowCell className={styles.customFormatScore}>
@@ -276,7 +276,7 @@ function InteractiveSearchRow(props: InteractiveSearchRowProps) {
             customFormats.length
           )}
           tooltip={<MovieFormats formats={customFormats} />}
-          position={tooltipPositions.TOP}
+          position={tooltipPositions.LEFT}
         />
       </TableRowCell>
 

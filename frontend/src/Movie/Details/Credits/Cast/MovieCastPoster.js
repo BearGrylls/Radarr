@@ -1,8 +1,15 @@
+import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Icon from 'Components/Icon';
+import Label from 'Components/Label';
+import Link from 'Components/Link/Link';
 import MonitorToggleButton from 'Components/MonitorToggleButton';
+import Popover from 'Components/Tooltip/Popover';
+import { icons, kinds, sizes } from 'Helpers/Props';
 import MovieHeadshot from 'Movie/MovieHeadshot';
 import EditImportListModalConnector from 'Settings/ImportLists/ImportLists/EditImportListModalConnector';
+import translate from 'Utilities/String/translate';
 import styles from '../MovieCreditPoster.css';
 
 class MovieCastPoster extends Component {
@@ -52,6 +59,7 @@ class MovieCastPoster extends Component {
 
   render() {
     const {
+      tmdbId,
       personName,
       character,
       images,
@@ -83,14 +91,34 @@ class MovieCastPoster extends Component {
         style={contentStyle}
       >
         <div className={styles.posterContainer}>
-          <div className={styles.controls}>
+          <div className={styles.toggleMonitoredContainer}>
             <MonitorToggleButton
-              className={styles.action}
+              className={styles.monitorToggleButton}
               monitored={monitored}
               size={20}
               onPress={importListId > 0 ? this.onEditImportListPress : this.onAddImportListPress}
             />
           </div>
+
+          <Label className={styles.controls}>
+            <span className={styles.externalLinks}>
+              <Popover
+                anchor={<Icon name={icons.EXTERNAL_LINK} size={12} />}
+                title={translate('Links')}
+                body={
+                  <Link to={`https://www.themoviedb.org/person/${tmdbId}`}>
+                    <Label
+                      className={styles.externalLinkLabel}
+                      kind={kinds.INFO}
+                      size={sizes.LARGE}
+                    >
+                      {translate('TMDb')}
+                    </Label>
+                  </Link>
+                }
+              />
+            </span>
+          </Label>
 
           <div
             style={elementStyle}
@@ -115,10 +143,10 @@ class MovieCastPoster extends Component {
           </div>
         </div>
 
-        <div className={styles.title}>
+        <div className={classNames(styles.title, 'swiper-no-swiping')}>
           {personName}
         </div>
-        <div className={styles.title}>
+        <div className={classNames(styles.title, 'swiper-no-swiping')}>
           {character}
         </div>
 

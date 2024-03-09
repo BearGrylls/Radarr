@@ -41,7 +41,7 @@ class ImportList extends Component {
     });
   };
 
-  onDeleteImportListModalClose= () => {
+  onDeleteImportListModalClose = () => {
     this.setState({ isDeleteImportListModalOpen: false });
   };
 
@@ -89,7 +89,7 @@ class ImportList extends Component {
           {
             enableAuto &&
               <Label kind={kinds.SUCCESS}>
-                {translate('Auto')}
+                {translate('AutomaticAdd')}
               </Label>
           }
         </div>

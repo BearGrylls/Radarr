@@ -65,6 +65,9 @@ namespace NzbDrone.Core.Indexers.HDBits
         [FieldDefinition(9)]
         public SeedCriteriaSettings SeedCriteria { get; set; } = new ();
 
+        [FieldDefinition(10, Type = FieldType.Checkbox, Label = "IndexerSettingsRejectBlocklistedTorrentHashes", HelpText = "IndexerSettingsRejectBlocklistedTorrentHashesHelpText", Advanced = true)]
+        public bool RejectBlocklistedTorrentHashesWhileGrabbing { get; set; }
+
         public NzbDroneValidationResult Validate()
         {
             return new NzbDroneValidationResult(Validator.Validate(this));

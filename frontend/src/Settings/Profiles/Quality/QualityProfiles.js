@@ -54,8 +54,8 @@ class QualityProfiles extends Component {
     return (
       <FieldSet legend={translate('QualityProfiles')}>
         <PageSectionContent
-          errorMessage={translate('UnableToLoadQualityProfiles')}
-          {...otherProps}c={true}
+          errorMessage={translate('QualityProfilesLoadError')}
+          {...otherProps}
         >
           <div className={styles.qualityProfiles}>
             {

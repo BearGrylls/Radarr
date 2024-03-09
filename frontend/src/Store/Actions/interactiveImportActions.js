@@ -56,6 +56,8 @@ export const defaultState = {
 };
 
 export const persistState = [
+  'interactiveImport.sortKey',
+  'interactiveImport.sortDirection',
   'interactiveImport.recentFolders',
   'interactiveImport.importMode'
 ];
@@ -157,6 +159,7 @@ export const actionHandlers = handleThunks({
         quality: item.quality,
         languages: item.languages,
         releaseGroup: item.releaseGroup,
+        indexerFlags: item.indexerFlags,
         downloadId: item.downloadId
       };
     });

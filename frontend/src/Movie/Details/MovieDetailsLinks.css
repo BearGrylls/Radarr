@@ -1,4 +1,6 @@
 .links {
+  display: flex;
+  flex-wrap: wrap;
   margin: 0;
 }
 

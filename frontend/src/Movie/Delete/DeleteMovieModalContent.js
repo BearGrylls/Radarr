@@ -50,11 +50,15 @@ class DeleteMovieModalContent extends Component {
       title,
       path,
       hasFile,
+      statistics,
       deleteOptions,
-      sizeOnDisk,
       onModalClose,
       onDeleteOptionChange
     } = this.props;
+
+    const {
+      sizeOnDisk = 0
+    } = statistics;
 
     const deleteFiles = this.state.deleteFiles;
     const addImportExclusion = deleteOptions.addImportExclusion;
@@ -94,7 +98,7 @@ class DeleteMovieModalContent extends Component {
               type={inputTypes.CHECK}
               name="addImportExclusion"
               value={addImportExclusion}
-              helpText={translate('AddImportExclusionHelpText')}
+              helpText={translate('AddListExclusionMovieHelpText')}
               kind={kinds.DANGER}
               onChange={onDeleteOptionChange}
             />
@@ -151,12 +155,16 @@ class DeleteMovieModalContent extends Component {
 DeleteMovieModalContent.propTypes = {
   title: PropTypes.string.isRequired,
   path: PropTypes.string.isRequired,
+  statistics: PropTypes.object.isRequired,
   hasFile: PropTypes.bool.isRequired,
-  sizeOnDisk: PropTypes.number.isRequired,
   deleteOptions: PropTypes.object.isRequired,
   onDeleteOptionChange: PropTypes.func.isRequired,
   onDeletePress: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired
+};
+
+DeleteMovieModalContent.defaultProps = {
+  statistics: {}
 };
 
 export default DeleteMovieModalContent;

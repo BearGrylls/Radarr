@@ -1,11 +1,15 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Icon from 'Components/Icon';
 import IconButton from 'Components/Link/IconButton';
 import ConfirmModal from 'Components/Modal/ConfirmModal';
+import RelativeDateCellConnector from 'Components/Table/Cells/RelativeDateCellConnector';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableRow from 'Components/Table/TableRow';
+import Popover from 'Components/Tooltip/Popover';
 import Tooltip from 'Components/Tooltip/Tooltip';
 import { icons, kinds, tooltipPositions } from 'Helpers/Props';
+import IndexerFlags from 'Movie/IndexerFlags';
 import MovieFormats from 'Movie/MovieFormats';
 import MovieLanguage from 'Movie/MovieLanguage';
 import MovieQuality from 'Movie/MovieQuality';
@@ -81,7 +85,9 @@ class MovieFileEditorRow extends Component {
       qualityCutoffNotMet,
       customFormats,
       customFormatScore,
+      indexerFlags,
       languages,
+      dateAdded,
       columns
     } = this.props;
 
@@ -141,8 +147,26 @@ class MovieFileEditorRow extends Component {
                       customFormats.length
                     )}
                     tooltip={<MovieFormats formats={customFormats} />}
-                    position={tooltipPositions.TOP}
+                    position={tooltipPositions.LEFT}
                   />
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'indexerFlags') {
+              return (
+                <TableRowCell
+                  key={name}
+                  className={styles.indexerFlags}
+                >
+                  {indexerFlags ? (
+                    <Popover
+                      anchor={<Icon name={icons.FLAG} kind={kinds.PRIMARY} />}
+                      title={translate('IndexerFlags')}
+                      body={<IndexerFlags indexerFlags={indexerFlags} />}
+                      position={tooltipPositions.LEFT}
+                    />
+                  ) : null}
                 </TableRowCell>
               );
             }
@@ -287,6 +311,16 @@ class MovieFileEditorRow extends Component {
               );
             }
 
+            if (name === 'dateAdded') {
+              return (
+                <RelativeDateCellConnector
+                  key={name}
+                  className={styles.dateAdded}
+                  date={dateAdded}
+                />
+              );
+            }
+
             if (name === 'actions') {
               return (
                 <TableRowCell key={name} className={styles.actions}>
@@ -351,15 +385,18 @@ MovieFileEditorRow.propTypes = {
   releaseGroup: PropTypes.string,
   customFormats: PropTypes.arrayOf(PropTypes.object).isRequired,
   customFormatScore: PropTypes.number.isRequired,
+  indexerFlags: PropTypes.number.isRequired,
   qualityCutoffNotMet: PropTypes.bool.isRequired,
   languages: PropTypes.arrayOf(PropTypes.object).isRequired,
   mediaInfo: PropTypes.object,
+  dateAdded: PropTypes.string,
   columns: PropTypes.arrayOf(PropTypes.object).isRequired,
   onDeletePress: PropTypes.func.isRequired
 };
 
 MovieFileEditorRow.defaultProps = {
-  customFormats: []
+  customFormats: [],
+  indexerFlags: 0
 };
 
 export default MovieFileEditorRow;

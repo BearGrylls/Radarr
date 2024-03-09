@@ -156,7 +156,7 @@ namespace NzbDrone.Core.Test.MediaFiles.DiskScanServiceTests
             Subject.Scan(_movie);
 
             Mocker.GetMock<IDiskProvider>()
-                  .Verify(v => v.GetFiles(It.IsAny<string>(), It.IsAny<bool>()), Times.Once());
+                  .Verify(v => v.GetFiles(It.IsAny<string>(), It.IsAny<bool>()), Times.Exactly(2));
 
             Mocker.GetMock<IMakeImportDecision>()
                   .Verify(v => v.GetImportDecisions(It.Is<List<string>>(l => l.Count == 1), _movie, false), Times.Once());
@@ -178,6 +178,7 @@ namespace NzbDrone.Core.Test.MediaFiles.DiskScanServiceTests
                            Path.Combine(_movie.Path, "Scenes", "file7.mkv").AsOsAgnostic(),
                            Path.Combine(_movie.Path, "Shorts", "file8.mkv").AsOsAgnostic(),
                            Path.Combine(_movie.Path, "Trailers", "file9.mkv").AsOsAgnostic(),
+                           Path.Combine(_movie.Path, "Other", "file9.mkv").AsOsAgnostic(),
                            Path.Combine(_movie.Path, "The Count of Monte Cristo (2002) (1080p BluRay x265 10bit Tigole).mkv").AsOsAgnostic(),
                        });
 

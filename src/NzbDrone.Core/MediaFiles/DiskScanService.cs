@@ -69,7 +69,7 @@ namespace NzbDrone.Core.MediaFiles
             _logger = logger;
         }
 
-        private static readonly Regex ExcludedExtrasSubFolderRegex = new Regex(@"(?:\\|\/|^)(?:extras|extrafanart|behind the scenes|deleted scenes|featurettes|interviews|scenes|sample[s]?|shorts|trailers)(?:\\|\/)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex ExcludedExtrasSubFolderRegex = new Regex(@"(?:\\|\/|^)(?:extras|extrafanart|behind the scenes|deleted scenes|featurettes|interviews|other|scenes|sample[s]?|shorts|trailers)(?:\\|\/)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex ExcludedSubFoldersRegex = new Regex(@"(?:\\|\/|^)(?:@eadir|\.@__thumb|plex versions|\.[^\\/]+)(?:\\|\/)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex ExcludedExtraFilesRegex = new Regex(@"(-(trailer|other|behindthescenes|deleted|featurette|interview|scene|short)\.[^.]+$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex ExcludedFilesRegex = new Regex(@"^\._|^Thumbs\.db$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -121,7 +121,7 @@ namespace NzbDrone.Core.MediaFiles
                 }
 
                 CleanMediaFiles(movie, new List<string>());
-                CompletedScanning(movie);
+                CompletedScanning(movie, new List<string>());
 
                 return;
             }
@@ -173,8 +173,11 @@ namespace NzbDrone.Core.MediaFiles
             fileInfoStopwatch.Stop();
             _logger.Trace("Reprocessing existing files complete for: {0} [{1}]", movie, decisionsStopwatch.Elapsed);
 
+            var filesOnDisk = GetNonVideoFiles(movie.Path);
+            var possibleExtraFiles = FilterPaths(movie.Path, filesOnDisk);
+
             RemoveEmptyMovieFolder(movie.Path);
-            CompletedScanning(movie);
+            CompletedScanning(movie, possibleExtraFiles);
         }
 
         private void CleanMediaFiles(Movie movie, List<string> mediaFileList)
@@ -183,10 +186,10 @@ namespace NzbDrone.Core.MediaFiles
             _mediaFileTableCleanupService.Clean(movie, mediaFileList);
         }
 
-        private void CompletedScanning(Movie movie)
+        private void CompletedScanning(Movie movie, List<string> possibleExtraFiles)
         {
             _logger.Info("Completed scanning disk for {0}", movie.Title);
-            _eventAggregator.PublishEvent(new MovieScannedEvent(movie));
+            _eventAggregator.PublishEvent(new MovieScannedEvent(movie, possibleExtraFiles));
         }
 
         public string[] GetVideoFiles(string path, bool allDirectories = true)

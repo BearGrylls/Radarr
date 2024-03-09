@@ -10,6 +10,7 @@ using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Processes;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.HealthCheck;
+using NzbDrone.Core.Localization;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Movies;
@@ -27,6 +28,7 @@ namespace NzbDrone.Core.Notifications.CustomScript
         private readonly IDiskProvider _diskProvider;
         private readonly IProcessProvider _processProvider;
         private readonly ITagRepository _tagRepository;
+        private readonly ILocalizationService _localizationService;
         private readonly Logger _logger;
 
         public CustomScript(IConfigFileProvider configFileProvider,
@@ -34,6 +36,7 @@ namespace NzbDrone.Core.Notifications.CustomScript
             IDiskProvider diskProvider,
             IProcessProvider processProvider,
             ITagRepository tagRepository,
+            ILocalizationService localizationService,
             Logger logger)
         {
             _configFileProvider = configFileProvider;
@@ -41,14 +44,15 @@ namespace NzbDrone.Core.Notifications.CustomScript
             _diskProvider = diskProvider;
             _processProvider = processProvider;
             _tagRepository = tagRepository;
+            _localizationService = localizationService;
             _logger = logger;
         }
 
-        public override string Name => "Custom Script";
+        public override string Name => _localizationService.GetLocalizedString("NotificationsCustomScriptSettingsName");
 
         public override string Link => "https://wiki.servarr.com/radarr/settings#connections";
 
-        public override ProviderMessage Message => new ProviderMessage("Testing will execute the script with the EventType set to Test, ensure your script handles this correctly", ProviderMessageType.Warning);
+        public override ProviderMessage Message => new ProviderMessage(_localizationService.GetLocalizedString("NotificationsCustomScriptSettingsProviderMessage", new Dictionary<string, object> { { "eventTypeTest", "Test" } }), ProviderMessageType.Warning);
 
         public override void OnGrab(GrabMessage message)
         {
@@ -65,7 +69,7 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Radarr_Movie_Year", movie.MovieMetadata.Value.Year.ToString());
             environmentVariables.Add("Radarr_Movie_OriginalLanguage", IsoLanguages.Get(movie.MovieMetadata.Value.OriginalLanguage).ThreeLetterCode);
             environmentVariables.Add("Radarr_Movie_Genres", string.Join("|", movie.MovieMetadata.Value.Genres));
-            environmentVariables.Add("Radarr_Movie_Tags", string.Join("|", movie.Tags.Select(t => _tagRepository.Get(t).Label)));
+            environmentVariables.Add("Radarr_Movie_Tags", string.Join("|", movie.Tags.Select(t => _tagRepository.Find(t)?.Label).Where(l => l.IsNotNullOrWhiteSpace())));
             environmentVariables.Add("Radarr_Movie_ImdbId", movie.MovieMetadata.Value.ImdbId ?? string.Empty);
             environmentVariables.Add("Radarr_Movie_TmdbId", movie.MovieMetadata.Value.TmdbId.ToString());
             environmentVariables.Add("Radarr_Movie_In_Cinemas_Date", movie.MovieMetadata.Value.InCinemas.ToString() ?? string.Empty);
@@ -139,9 +143,10 @@ namespace NzbDrone.Core.Notifications.CustomScript
 
             if (message.OldMovieFiles.Any())
             {
-                environmentVariables.Add("Radarr_DeletedRelativePaths", string.Join("|", message.OldMovieFiles.Select(e => e.RelativePath)));
-                environmentVariables.Add("Radarr_DeletedPaths", string.Join("|", message.OldMovieFiles.Select(e => Path.Combine(movie.Path, e.RelativePath))));
-                environmentVariables.Add("Radarr_DeletedDateAdded", string.Join("|", message.OldMovieFiles.Select(e => e.DateAdded)));
+                environmentVariables.Add("Radarr_DeletedRelativePaths", string.Join("|", message.OldMovieFiles.Select(e => e.MovieFile.RelativePath)));
+                environmentVariables.Add("Radarr_DeletedPaths", string.Join("|", message.OldMovieFiles.Select(e => Path.Combine(movie.Path, e.MovieFile.RelativePath))));
+                environmentVariables.Add("Radarr_DeletedDateAdded", string.Join("|", message.OldMovieFiles.Select(e => e.MovieFile.DateAdded)));
+                environmentVariables.Add("Radarr_DeletedRecycleBinPaths", string.Join("|", message.OldMovieFiles.Select(e => e.RecycleBinPath ?? string.Empty)));
             }
 
             ExecuteScript(environmentVariables);
@@ -318,8 +323,8 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Radarr_Movie_ImdbId", movie.MovieMetadata.Value.ImdbId ?? string.Empty);
             environmentVariables.Add("Radarr_Movie_TmdbId", movie.MovieMetadata.Value.TmdbId.ToString());
             environmentVariables.Add("Radarr_Movie_Overview", movie.MovieMetadata.Value.Overview);
-            environmentVariables.Add("Radarr_Download_Client", message.DownloadClientName ?? string.Empty);
-            environmentVariables.Add("Radarr_Download_Client_Type", message.DownloadClientType ?? string.Empty);
+            environmentVariables.Add("Radarr_Download_Client", message.DownloadClientInfo?.Name ?? string.Empty);
+            environmentVariables.Add("Radarr_Download_Client_Type", message.DownloadClientInfo?.Type ?? string.Empty);
             environmentVariables.Add("Radarr_Download_Id", message.DownloadId ?? string.Empty);
             environmentVariables.Add("Radarr_Download_Size", message.TrackedDownload.DownloadItem.TotalSize.ToString());
             environmentVariables.Add("Radarr_Download_Title", message.TrackedDownload.DownloadItem.Title);
@@ -333,7 +338,7 @@ namespace NzbDrone.Core.Notifications.CustomScript
 
             if (!_diskProvider.FileExists(Settings.Path))
             {
-                failures.Add(new NzbDroneValidationFailure("Path", "File does not exist"));
+                failures.Add(new NzbDroneValidationFailure("Path", _localizationService.GetLocalizedString("NotificationsCustomScriptValidationFileDoesNotExist")));
             }
 
             if (failures.Empty())

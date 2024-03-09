@@ -70,6 +70,34 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
             return new HashSet<int>(response.Resource);
         }
 
+        public List<MovieMetadata> GetTrendingMovies()
+        {
+            var request = _radarrMetadata.Create()
+                .SetSegment("route", "list/tmdb/trending")
+                .Build();
+
+            request.AllowAutoRedirect = true;
+            request.SuppressHttpError = true;
+
+            var response = _httpClient.Get<List<MovieResource>>(request);
+
+            return response.Resource.DistinctBy(x => x.TmdbId).Select(MapMovie).ToList();
+        }
+
+        public List<MovieMetadata> GetPopularMovies()
+        {
+            var request = _radarrMetadata.Create()
+                .SetSegment("route", "list/tmdb/popular")
+                .Build();
+
+            request.AllowAutoRedirect = true;
+            request.SuppressHttpError = true;
+
+            var response = _httpClient.Get<List<MovieResource>>(request);
+
+            return response.Resource.DistinctBy(x => x.TmdbId).Select(MapMovie).ToList();
+        }
+
         public Tuple<MovieMetadata, List<Credit>> GetMovieInfo(int tmdbId)
         {
             var httpRequest = _radarrMetadata.Create()
@@ -489,17 +517,17 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
             catch (HttpException ex)
             {
                 _logger.Warn(ex);
-                throw new SkyHookException("Search for '{0}' failed. Unable to communicate with TMDb.", ex, title);
+                throw new SkyHookException("Search for '{0}' failed. Unable to communicate with RadarrAPI.", ex, title);
             }
             catch (WebException ex)
             {
                 _logger.Warn(ex);
-                throw new SkyHookException("Search for '{0}' failed. Unable to communicate with TMDb.", ex, title, ex.Message);
+                throw new SkyHookException("Search for '{0}' failed. Unable to communicate with RadarrAPI.", ex, title, ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.Warn(ex);
-                throw new SkyHookException("Search for '{0}' failed. Invalid response received from TMDb.", ex, title);
+                throw new SkyHookException("Search for '{0}' failed. Invalid response received from RadarrAPI.", ex, title);
             }
         }
 

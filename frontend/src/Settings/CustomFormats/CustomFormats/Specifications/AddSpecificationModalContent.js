@@ -42,9 +42,9 @@ class AddSpecificationModalContent extends Component {
 
           {
             !isSchemaFetching && !!schemaError &&
-              <div>
-                {translate('UnableToAddANewConditionPleaseTryAgain')}
-              </div>
+              <Alert kind={kinds.DANGER}>
+                {translate('AddConditionError')}
+              </Alert>
           }
 
           {
@@ -53,10 +53,10 @@ class AddSpecificationModalContent extends Component {
 
                 <Alert kind={kinds.INFO}>
                   <div>
-                    {translate('RadarrSupportsCustomConditionsAgainstTheReleasePropertiesBelow')}
+                    {translate('SupportedCustomConditions')}
                   </div>
                   <div>
-                    {translate('VisitGithubCustomFormatsAphrodite')}
+                    {translate('VisitTheWikiForMoreDetails')}
                     <Link to="https://wiki.servarr.com/radarr/settings#custom-formats-2">{translate('Wiki')}</Link>
                   </div>
                 </Alert>
